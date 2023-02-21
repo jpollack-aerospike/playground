@@ -72,12 +72,7 @@ print_node (const void *user_data, const readosm_node * node)
     if (user_data != NULL)
 	user_data = NULL;	/* silencing stupid compiler warnings */
 
-#if defined(_WIN32) || defined(__MINGW32__)
-    /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-    sprintf (buf, "%I64d", node->id);
-#else
     sprintf (buf, "%lld", node->id);
-#endif
     printf ("\t<node id=\"%s\"", buf);
 
 /*
@@ -94,12 +89,7 @@ print_node (const void *user_data, const readosm_node * node)
     if (node->changeset != READOSM_UNDEFINED)
       {
 
-#if defined(_WIN32) || defined(__MINGW32__)
-	  /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-	  sprintf (buf, "%I64d", node->changeset);
-#else
 	  sprintf (buf, "%lld", node->changeset);
-#endif
 	  printf (" changeset=\"%s\"", buf);
       }
 
@@ -162,12 +152,7 @@ print_way (const void *user_data, const readosm_way * way)
     if (user_data != NULL)
 	user_data = NULL;	/* silencing stupid compiler warnings */
 
-#if defined(_WIN32) || defined(__MINGW32__)
-    /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-    sprintf (buf, "%I64d", way->id);
-#else
     sprintf (buf, "%lld", way->id);
-#endif
     printf ("\t<way id=\"%s\"", buf);
 
 /*
@@ -179,12 +164,7 @@ print_way (const void *user_data, const readosm_way * way)
 	printf (" version=\"%d\"", way->version);
     if (way->changeset != READOSM_UNDEFINED)
       {
-#if defined(_WIN32) || defined(__MINGW32__)
-	  /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-	  sprintf (buf, "%I64d", way->changeset);
-#else
 	  sprintf (buf, "%lld", way->changeset);
-#endif
 	  printf (" changeset=\"%s\"", buf);
       }
 
@@ -213,12 +193,7 @@ print_way (const void *user_data, const readosm_way * way)
 	  for (i = 0; i < way->node_ref_count; i++)
 	    {
 		/* we'll now print each <nd ref> for this way */
-#if defined(_WIN32) || defined(__MINGW32__)
-		/* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-		sprintf (buf, "%I64d", *(way->node_refs + i));
-#else
 		sprintf (buf, "%lld", *(way->node_refs + i));
-#endif
 		printf ("\t\t<nd ref=\"%s\" />\n", buf);
 	    }
 	  for (i = 0; i < way->tag_count; i++)
@@ -260,12 +235,7 @@ print_relation (const void *user_data, const readosm_relation * relation)
     if (user_data != NULL)
 	user_data = NULL;	/* silencing stupid compiler warnings */
 
-#if defined(_WIN32) || defined(__MINGW32__)
-    /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-    sprintf (buf, "%I64d", relation->id);
-#else
     sprintf (buf, "%lld", relation->id);
-#endif
     printf ("\t<relation id=\"%s\"", buf);
 
 /*
@@ -277,12 +247,7 @@ print_relation (const void *user_data, const readosm_relation * relation)
 	printf (" version=\"%d\"", relation->version);
     if (relation->changeset != READOSM_UNDEFINED)
       {
-#if defined(_WIN32) || defined(__MINGW32__)
-	  /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-	  sprintf (buf, "%I64d", relation->changeset);
-#else
 	  sprintf (buf, "%lld", relation->changeset);
-#endif
 	  printf (" changeset=\"%s\"", buf);
       }
 
@@ -312,12 +277,7 @@ print_relation (const void *user_data, const readosm_relation * relation)
 	    {
 		/* we'll now print each <member> for this way */
 		member = relation->members + i;
-#if defined(_WIN32) || defined(__MINGW32__)
-		/* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-		sprintf (buf, "%I64d", member->id);
-#else
 		sprintf (buf, "%lld", member->id);
-#endif
 		/* any <member> may be of "node", "way" or "relation" type */
 		switch (member->member_type)
 		  {
