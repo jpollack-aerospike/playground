@@ -1,5 +1,5 @@
 Playground for stuff to commit before it gets spun out.
 
-* osm - example files that use libreadosm
+* libreadosm_example - example files that use libreadosm
 * libaerospike_example - example that uses libaerospike
 
