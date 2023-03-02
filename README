@@ -2,4 +2,5 @@ Playground for stuff to commit before it gets spun out.
 
 * libreadosm_example - example files that use libreadosm
 * libaerospike_example - example that uses libaerospike
+* osm2json - converts osm file to ndjson, doesn't handle relations yet.
 
