@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <tuple>
+#include <chrono>
 #include <aerospike/aerospike.h>
 #include <aerospike/aerospike_key.h>
 #include <aerospike/as_error.h>
@@ -19,24 +20,17 @@
 #include "common.hpp"
 
 static const char USAGE[] =
-    R"(usage: program [options]
+    R"(usage: list_records [options]
 
 options:
   -h --help
   --asdb=SOCKADDR     Aerospike Server [default: 127.0.0.1:3000]
   --ns=NAMESPACE      Namespace [default: test]
-  --sn=SET            Set [default: set0]
+  --sn=SET            Set [default: ]
 )";
 
 using namespace std;
-
-struct Options 
-{
-    uint16_t portno{3000};
-    string hostname;
-    string ns;
-    string sn;
-};
+uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
 
 static bool log_callback(as_log_level level, const char * func, const char * file, uint32_t line, const char * fmt, ...)
 {
@@ -48,83 +42,81 @@ static bool log_callback(as_log_level level, const char * func, const char * fil
 	return true;
 }
 
-static bool callback (const as_val *value, void *udata)
+aerospike as;
+string ns;
+string sn{""};
+
+static bool callback_entry (const as_val *value, void *udata)
 {
-    assert (value);
+    if (!value) return false;
     as_record *rec = as_record_fromval (value);
-    if (!rec) {
-	cout << "Got False\n";
-	return true;
+    assert (rec);
+    const char *set = (rec->key.set[0] == 0) ? nullptr : rec->key.set;
+    
+    as_record_iterator it;
+    as_record_iterator_init (&it, rec);
+    printf ("%s\t", set);
+    while (as_record_iterator_has_next (&it)) {
+	as_bin *bin = as_record_iterator_next (&it);
+	char *valstr = as_val_tostring (as_bin_get_value (bin));
+	printf ("%s:%s ", as_bin_get_name (bin), valstr);
+	free (valstr);
     }
-    StringRecord sr (rec);
-    cout << "'" << sr.key () << "' ";
-    for (const auto& [k, v]: sr.bins ())
-    {
-	cout << " [" << k << ":" << v << "]\t";
-    }
-    cout << "\n";
-	
+    printf ("\n");
+    as_record_iterator_destroy (&it);
     return true;
 }
 
-int entry (const Options& o)
+int entry (void)
 {
-    as_log_set_callback(log_callback);
-
-    as_config config;
-    as_config_init (&config);
-    // Note: doesn't always DTRT with hostnames, so use IP addrs
-    if (!as_config_add_hosts (&config, o.hostname.c_str (), o.portno)) {
-	fprintf(stderr, "Invalid host(s) %s\n", o.hostname.c_str ());
-	return -1;
-    }
-
-    aerospike as;
-    aerospike_init (&as, &config);
-    as_error err;
-   
-    if (aerospike_connect (&as, &err) != AEROSPIKE_OK) {
-	fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line); 
-	return -1;
-    }
-    
     as_scan s0;
-    as_scan_init(&s0, o.ns.c_str (), o.sn.c_str ());
+    as_scan_init(&s0, ns.c_str (), (sn.size () > 0) ? sn.c_str () : nullptr);
 
-    if (aerospike_scan_foreach(&as, &err, NULL, &s0, callback, NULL) != AEROSPIKE_OK) {
+    as_error err;
+    if (aerospike_scan_foreach(&as, &err, NULL, &s0, callback_entry, NULL) != AEROSPIKE_OK) {
 	fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line); 
 	return -1;
     }
 
     as_scan_destroy (&s0);
-
-
-    if (aerospike_close(&as, &err) != AEROSPIKE_OK) {
-	fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line);
-	return -1;
-    }
-
-    aerospike_destroy(&as);	
     return 0;
 }
 
-void parseArguments (int argc, char **argv, Options& o)
-{
-    auto dargs {docopt::docopt (USAGE, {argv+1, argv+argc})};
+int main (int argc, char **argv) 
+{ 
+    string hostname;
+    uint64_t portno{3000};
+    {
+	auto d{docopt::docopt (USAGE, {argv+1, argv+argc})};
+	hostname = d["--asdb"].asString ();
+	size_t cpos = hostname.find(':');
+	if (cpos != string::npos) {
+	    portno = stoi (hostname.substr (cpos+1));
+	    hostname = hostname.substr (0, cpos);
+	}
+	ns = d["--ns"].asString (); 
+	sn = d["--sn"].asString ();
+	cerr << sn << "\n";
+   }
 
-    o.hostname = dargs["--asdb"].asString();
-    size_t cpos = o.hostname.find(':');
-    if (cpos != string::npos) {
-	o.portno = stoi (o.hostname.substr (cpos+1));
-	o.hostname = o.hostname.substr (0, cpos);
-    }
-    o.ns = dargs["--ns"].asString ();
-    o.sn = dargs["--sn"].asString ();
-}
+    as_log_set_callback(log_callback);
 
-int main (int argc, char **argv)
-{
-    Options options{};
-    parseArguments (argc, argv, options);
-    return entry (options);
+    as_config config;
+    as_config_init (&config);
+    assert (as_config_add_hosts (&config, hostname.c_str (), portno));
+    aerospike_init (&as, &config);
+    as_error err;
+    assert (aerospike_connect (&as, &err) == AEROSPIKE_OK);
+
+    auto t0 = usec_now ();
+    entry ();
+    auto t1 = usec_now ();
+    auto tdur = t1 - t0;
+
+    assert (aerospike_close(&as, &err) == AEROSPIKE_OK);
+    aerospike_destroy(&as);	
+
+    fprintf (stderr, "%f seconds.\n", tdur / 1000000.0);
+
+    return 0;
 }
