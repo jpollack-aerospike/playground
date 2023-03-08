@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DURATION=60
+DURATION=30
 TEST_DEV=/dev/asvg0/test
 
 dd if=/dev/zero bs=1M of="$TEST_DEV" count=10 oflag=sync
@@ -36,7 +36,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randwrite-normal.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >write-normal.json
 rm -rf fio_out.json iostat_out.json
 
 # randread
@@ -70,7 +70,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randread-normal.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >read-normal.json
 rm -rf fio_out.json iostat_out.json
 
 # randrw
@@ -104,7 +104,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randrw-normal.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >rw-normal.json
 rm -rf fio_out.json iostat_out.json
 
 # Create integrity device
@@ -146,7 +146,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randwrite-integrity.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >write-integrity.json
 rm -rf fio_out.json iostat_out.json
 
 # randread
@@ -180,7 +180,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randread-integrity.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >read-integrity.json
 rm -rf fio_out.json iostat_out.json
 
 # randrw
@@ -214,6 +214,7 @@ fio \
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
-echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . > randrw-integrity.json
+echo "{ \"fio\":$fio_out, \"iostat\":$iostat_out }" | jq --sort-keys --compact-output . >rw-integrity.json
 rm -rf fio_out.json iostat_out.json
 
+integritysetup close itest
