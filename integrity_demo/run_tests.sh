@@ -14,7 +14,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1 > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -35,6 +35,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
@@ -48,7 +50,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1  > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -69,6 +71,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
@@ -82,7 +86,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1 > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -103,6 +107,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
@@ -124,7 +130,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1  > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -145,6 +151,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
@@ -158,7 +166,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1  > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -179,6 +187,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
@@ -192,7 +202,7 @@ iostat \
     -d \
     -c \
     -o JSON \
-    1 $(($DURATION + 5)) > iostat_out.json &
+    1 > iostat_out.json &
 
 iostat_pid=$!
 sleep 1
@@ -213,6 +223,8 @@ fio \
     --output=fio_out.json \
     --output-format=json
 
+sleep 1
+kill -s SIGINT $iostat_pid
 wait $iostat_pid
 iostat_out=$(jq .sysstat.hosts[0].statistics iostat_out.json)
 fio_out=$(<fio_out.json)
