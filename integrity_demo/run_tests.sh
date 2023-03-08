@@ -1,6 +1,8 @@
 #!/bin/bash
 
-DURATION=30
+DURATION=60
+NUMJOBS=16
+IODEPTH=16
 TEST_DEV=/dev/asvg0/test
 
 dd if=/dev/zero bs=1M of="$TEST_DEV" count=10 oflag=sync
@@ -22,10 +24,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randwrite \
     --runtime=$DURATION \
     --time_based \
@@ -56,10 +58,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randread \
     --runtime=$DURATION \
     --time_based \
@@ -90,10 +92,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randrw \
     --runtime=$DURATION \
     --time_based \
@@ -132,10 +134,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randwrite \
     --runtime=$DURATION \
     --time_based \
@@ -166,10 +168,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randread \
     --runtime=$DURATION \
     --time_based \
@@ -200,10 +202,10 @@ fio \
     --direct=1 \
     --filename=$TEST_DEV \
     --group_reporting \
-    --iodepth=16 \
+    --iodepth=$IODEPTH \
     --ioengine=mmap \
     --norandommap \
-    --numjobs=64 \
+    --numjobs=$NUMJOBS \
     --rw=randrw \
     --runtime=$DURATION \
     --time_based \
