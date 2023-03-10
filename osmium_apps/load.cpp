@@ -45,7 +45,8 @@ uint16_t portno;
 string hostname;
 string ns;
 string osmfname;
-uint64_t nway, nrelation, nnode;
+uint64_t num_nodes{0}, num_ways{0}, num_relations{0};
+
 uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
 
 inline void TSC_MarkStart (uint64_t &ret) // Takes ~220 cycles
@@ -68,14 +69,22 @@ inline void TSC_MarkStop (uint64_t &ret) // Takes ~250 cycles
 }
 
 struct LoadHandler : public osmium::handler::Handler {
-    int counter = 0;
-    void relation(const osmium::Relation &relation) {
-        counter++;
+
+    void node(const osmium::Node &node) {
+	num_nodes++;
     }
+    void way(const osmium::Way &way) {
+	num_ways++;
+    }
+    void relation(const osmium::Relation &relation) {
+	num_relations++;
+    }
+
 };
 
 int main (int argc, char **argv) 
 { 
+    LoadHandler handler;
     {
 	auto d{docopt::docopt (USAGE, {argv+1, argv+argc})};
 	skip_nodes = d["--skip_nodes"].asBool ();
@@ -97,7 +106,6 @@ int main (int argc, char **argv)
     auto t0 = usec_now ();
     TSC_MarkStart (c0);
     {
-	LoadHandler handler;
 	osmium::io::File infile{osmfname};
 	osmium::io::ReaderWithProgressBar reader{osmium::isatty(2), infile};
 	osmium::apply (reader, handler);
@@ -106,11 +114,8 @@ int main (int argc, char **argv)
 
     TSC_MarkStop (c1);
     auto t1 = usec_now ();
-
     auto tdur = t1 - t0;
-    auto cdur = c1 - c0;
-    double tspus = double(cdur) / double(tdur);
-    printf ("%lu\t%lu\t%lf\n",tdur, cdur, tspus);
+    fprintf (stderr, "%lld nodes, %lld ways, %lld relations, %f seconds.\n", num_nodes, num_ways, num_relations, tdur / 1000000.0);
 
     return 0;
 }
