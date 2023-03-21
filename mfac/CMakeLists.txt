@@ -44,3 +44,5 @@ target_link_libraries(create_records docopt aerospike Threads::Threads)
 add_executable(list_records common.cpp list_records.cpp)
 target_link_libraries(list_records docopt aerospike Threads::Threads)
 
+add_executable(load load.cpp)
+target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json Threads::Threads)
