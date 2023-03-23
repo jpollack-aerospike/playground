@@ -53,3 +53,6 @@ target_link_libraries(list_records docopt aerospike Threads::Threads)
 
 add_executable(load load.cpp)
 target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json concurrentqueue Threads::Threads)
+
+add_executable(gharchive_split gharchive_split.cpp)
+target_link_libraries(gharchive_split docopt aerospike nlohmann_json::nlohmann_json Threads::Threads)
