@@ -31,6 +31,7 @@
 #include <aerospike/as_arraylist.h>
 #include <aerospike/as_hashmap.h>
 #include <aerospike/as_stringmap.h>
+#include <aerospike/as_nil.h>
 
 inline void __dieunless (const char *msg, const char *file, int line) { fprintf (stderr, "[%s:%d] Assertion '%s' failed.\n", file, line, msg); abort (); }
 
@@ -78,6 +79,7 @@ as_val * as_val_from_json (const json& jel)
     case json::value_t::number_unsigned:		return (as_val *)as_integer_new (jel.get<uint64_t>());
     case json::value_t::number_float:			return (as_val *)as_double_new (jel.get<double>());
     case json::value_t::boolean:			return (as_val *)as_boolean_new (jel.get<bool>());
+    case json::value_t::null:				return (as_val *)&as_nil;
     }
 }
 
@@ -130,7 +132,12 @@ bool AerospikeDB::put (int64_t ki, const string& jsonstr)
     as_val *asv = as_val_from_json (j);
     as_record_set_map (&rec0, m_bin.c_str (), (as_map *) asv);
     as_error err;
-    dieunless (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0) == AEROSPIKE_OK);
+    if (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0) != AEROSPIKE_OK) {
+
+	
+	fprintf(stderr, "key:%lu\tas_val:%p\terr(%d) %s at [%s:%d]\n", ki, asv, err.code, err.message, err.file, err.line); 
+	return false;
+    }
 }
 
 static uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
