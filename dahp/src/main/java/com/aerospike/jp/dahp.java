@@ -55,7 +55,8 @@ public class dahp {
 	options.addOption (null, "set", true, "Set name (default: s0)");
 	options.addOption (null, "keyStart", true, "Key start (default: 0)");
 	options.addOption (null, "keyStop", true, "Key stop (default: 1000)");
-
+	options.addOption (null, "show", false, "Display query results");
+	
         CommandLineParser parser = new DefaultParser();
         CommandLine cl = parser.parse(options, args, false);
 
@@ -66,7 +67,7 @@ public class dahp {
         String bin = cl.getOptionValue("bin", "map");
 	long keyStart = Long.parseLong (cl.getOptionValue ("keyStart", "0"));
 	long keyStop = Long.parseLong (cl.getOptionValue ("keyStop", "1000"));
-        
+
 	String[] queries = cl.getArgs ();
 
         if (cl.hasOption("help") || (queries.length == 0)) {
@@ -83,11 +84,20 @@ public class dahp {
 	AerospikeDocumentClient documentClient = new AerospikeDocumentClient(client);
 	String query = queries[0];
 	long t0 = System.currentTimeMillis ();
-	for (long ki = keyStart; ki <= keyStop; ki++) {
-	    Key key0 = new Key (namespace, set, ki);
-	    Object obj = documentClient.get (key0, bin, query);
-	    // System.out.println(JsonConverters.writeValueAsString (obj));
+
+	if (cl.hasOption ("show")) {
+	    for (long ki = keyStart; ki <= keyStop; ki++) {
+		Key key0 = new Key (namespace, set, ki);
+		Object obj = documentClient.get (key0, bin, query);
+		System.out.println(JsonConverters.writeValueAsString (obj));
+	    }
+	} else {
+	    for (long ki = keyStart; ki <= keyStop; ki++) {
+		Key key0 = new Key (namespace, set, ki);
+		Object obj = documentClient.get (key0, bin, query);
+	    }
 	}
+
 	long t1 = System.currentTimeMillis ();
 	long tdur = t1 - t0;
 	long nrec = (keyStop - keyStart) + 1;
