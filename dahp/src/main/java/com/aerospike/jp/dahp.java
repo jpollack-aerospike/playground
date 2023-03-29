@@ -95,5 +95,4 @@ public class dahp {
 	System.out.println ("queried " + nrec + " records in " + tdur + " ms (" + rat + " ms/record)");
 	client.close();
     }
-
 }

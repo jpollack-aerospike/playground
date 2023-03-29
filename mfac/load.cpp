@@ -133,11 +133,10 @@ bool AerospikeDB::put (int64_t ki, const string& jsonstr)
     as_record_set_map (&rec0, m_bin.c_str (), (as_map *) asv);
     as_error err;
     if (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0) != AEROSPIKE_OK) {
-
-	
 	fprintf(stderr, "key:%lu\tas_val:%p\terr(%d) %s at [%s:%d]\n", ki, asv, err.code, err.message, err.file, err.line); 
 	return false;
     }
+    return true;
 }
 
 static uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
