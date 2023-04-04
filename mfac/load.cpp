@@ -41,7 +41,7 @@ using namespace std;
 using json = nlohmann::json;
 
 static const char USAGE[] =
-    R"(usage: load [options] 
+    R"(usage: load [options]
 
 options:
   -h --help
@@ -54,37 +54,41 @@ options:
 )";
 
 
-as_val * as_val_from_json (const json& jel)
+as_val * as_val_new_from_json (const json& jel)
 {
+    as_val *ret{nullptr};
     switch (jel.type ())
     {
     case json::value_t::object:
     {
 	as_orderedmap *mp = as_orderedmap_new (jel.size ());
 	for (const auto& [jkey, jval] : jel.items ())
-	    as_orderedmap_set (mp, as_val_from_json (jkey), as_val_from_json (jval));
-	
-	return (as_val *) mp;
+	    as_orderedmap_set (mp, as_val_new_from_json (jkey), as_val_new_from_json (jval));
+
+	ret = (as_val *)mp;
+	break; 
     }
     case json::value_t::array:
     {
 	as_arraylist *lp = as_arraylist_new (jel.size (), 0);
 	for (const auto& el : jel)
-	    as_arraylist_append (lp, as_val_from_json (el));
-	
-	return (as_val *)lp;
+	    as_arraylist_append (lp, as_val_new_from_json (el));
+
+	ret = (as_val *)lp;
+	break;
     }
-    case json::value_t::string:				return (as_val *)as_string_new (strdup (jel.get<string>().c_str ()), true);
-    case json::value_t::number_integer:			return (as_val *)as_integer_new (jel.get<int64_t>());
-    case json::value_t::number_unsigned:		return (as_val *)as_integer_new (jel.get<uint64_t>());
-    case json::value_t::number_float:			return (as_val *)as_double_new (jel.get<double>());
-    case json::value_t::boolean:			return (as_val *)as_boolean_new (jel.get<bool>());
-    case json::value_t::null:				return (as_val *)&as_nil;
-    case json::value_t::binary:				return (as_val *)as_bytes_new_wrap ((uint8_t *)jel.get_binary ().data (),jel.get_binary ().size (), false);
+    case json::value_t::string:				ret = (as_val *)as_string_new (strdup (jel.get<string>().c_str ()), true); break;
+    case json::value_t::number_integer:			ret = (as_val *)as_integer_new (jel.get<int64_t>()); break;
+    case json::value_t::number_unsigned:		ret = (as_val *)as_integer_new (jel.get<uint64_t>()); break;
+    case json::value_t::number_float:			ret = (as_val *)as_double_new (jel.get<double>()); break;
+    case json::value_t::boolean:			ret = (as_val *)as_boolean_new (jel.get<bool>()); break;
+    case json::value_t::null:				ret = (as_val *)&as_nil; break;
+    case json::value_t::binary:				ret = (as_val *)as_bytes_new_wrap ((uint8_t *)jel.get_binary ().data (),jel.get_binary ().size (), false); break;
+    default:	    dieunless (false);
     }
-    
-    dieunless (false);
-    return nullptr;
+
+
+    return ret;
 }
 
 
@@ -105,7 +109,7 @@ AerospikeDB::AerospikeDB (const string& hostport, const string& ns, const string
     : m_ns (ns),
       m_set (set),
       m_bin (bin)
-{   
+{
     size_t cpos = hostport.find (':');
     dieunless (cpos != string::npos);
     int portno = stoi (hostport.substr (cpos+1));
@@ -115,13 +119,13 @@ AerospikeDB::AerospikeDB (const string& hostport, const string& ns, const string
     as_config_init (&config);
     dieunless (as_config_add_hosts (&config, hostname.c_str (), portno));
     aerospike_init (&m_as, &config);
-    
+
     as_error err;
     dieunless (aerospike_connect (&m_as, &err) == AEROSPIKE_OK);
 }
 
 AerospikeDB::~AerospikeDB ()
-{   
+{
     as_error err;
     dieunless (aerospike_close (&m_as, &err) == AEROSPIKE_OK);
 }
@@ -129,20 +133,26 @@ AerospikeDB::~AerospikeDB ()
 bool AerospikeDB::put (int64_t ki, const string& jsonstr)
 {
     json j = json::parse (jsonstr);
+
     as_key key0;
     as_key_init_int64 (&key0, m_ns.c_str (), m_set.c_str (), ki);
     as_record rec0;
     as_record_inita (&rec0, 1);
-    as_val *asv = as_val_from_json (j);
-    as_record_set_map (&rec0, m_bin.c_str (), (as_map *) asv);
+    as_orderedmap map0;
+    as_orderedmap_init (&map0, j.size ());
+    for (const auto& [jkey, jval] : j.items ())
+	as_orderedmap_set (&map0, as_val_new_from_json (jkey), as_val_new_from_json (jval));
+
+    as_record_set_map (&rec0, m_bin.c_str (), (as_map *) &map0);
     as_error err;
     switch (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0)) {
     case AEROSPIKE_ERR_RECORD_TOO_BIG:
 	fprintf (stderr, "record %lu too big, not inserted.  original string length: %lu\n", ki, jsonstr.length ());
     case AEROSPIKE_OK:
+	as_orderedmap_destroy (&map0);
 	return true;
     default:
-	fprintf(stderr, "key:%lu\tas_val:%p\terr(%d) %s at [%s:%d]\n", ki, asv, err.code, err.message, err.file, err.line); 
+	fprintf(stderr, "key:%lu\tas_map:%p\terr(%d) %s at [%s:%d]\n", ki, &map0, err.code, err.message, err.file, err.line);
     }
     return false;
 }
@@ -158,14 +168,14 @@ static bool log_callback(as_log_level level, const char * func, const char * fil
         return true;
 }
 
-int main (int argc, char **argv) 
-{ 
+int main (int argc, char **argv)
+{
     auto d{docopt::docopt (USAGE,{argv+1,argv+argc})};
     int64_t kii = d["--start"].asLong ();
     AerospikeDB db{d["--asdb"].asString (), d["--ns"].asString (), d["--set"].asString (), d["--bin"].asString ()};
 
     string line;
-    while (getline (std::cin, line))	
+    while (getline (std::cin, line))
 	dieunless (db.put (kii++, line));
 
     return 0;
