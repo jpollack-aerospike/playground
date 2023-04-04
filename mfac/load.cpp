@@ -53,10 +53,8 @@ options:
 
 )";
 
-
 as_val * as_val_new_from_json (const json& jel)
 {
-    as_val *ret{nullptr};
     switch (jel.type ())
     {
     case json::value_t::object:
@@ -65,8 +63,7 @@ as_val * as_val_new_from_json (const json& jel)
 	for (const auto& [jkey, jval] : jel.items ())
 	    as_orderedmap_set (mp, as_val_new_from_json (jkey), as_val_new_from_json (jval));
 
-	ret = (as_val *)mp;
-	break; 
+	return (as_val *)mp;
     }
     case json::value_t::array:
     {
@@ -74,21 +71,19 @@ as_val * as_val_new_from_json (const json& jel)
 	for (const auto& el : jel)
 	    as_arraylist_append (lp, as_val_new_from_json (el));
 
-	ret = (as_val *)lp;
-	break;
+	return (as_val *)lp;
     }
-    case json::value_t::string:				ret = (as_val *)as_string_new (strdup (jel.get<string>().c_str ()), true); break;
-    case json::value_t::number_integer:			ret = (as_val *)as_integer_new (jel.get<int64_t>()); break;
-    case json::value_t::number_unsigned:		ret = (as_val *)as_integer_new (jel.get<uint64_t>()); break;
-    case json::value_t::number_float:			ret = (as_val *)as_double_new (jel.get<double>()); break;
-    case json::value_t::boolean:			ret = (as_val *)as_boolean_new (jel.get<bool>()); break;
-    case json::value_t::null:				ret = (as_val *)&as_nil; break;
-    case json::value_t::binary:				ret = (as_val *)as_bytes_new_wrap ((uint8_t *)jel.get_binary ().data (),jel.get_binary ().size (), false); break;
-    default:	    dieunless (false);
+    case json::value_t::string:				return (as_val *)as_string_new (strdup (jel.get<string>().c_str ()), true);
+    case json::value_t::number_integer:			return (as_val *)as_integer_new (jel.get<int64_t>());
+    case json::value_t::number_unsigned:		return (as_val *)as_integer_new (jel.get<uint64_t>());
+    case json::value_t::number_float:			return (as_val *)as_double_new (jel.get<double>());
+    case json::value_t::boolean:			return (as_val *)as_boolean_new (jel.get<bool>());
+    case json::value_t::null:				return (as_val *)&as_nil;
+    case json::value_t::binary:				return (as_val *)as_bytes_new_wrap ((uint8_t *)jel.get_binary ().data (),jel.get_binary ().size (), false);
     }
 
-
-    return ret;
+    dieunless (false);
+    return nullptr;
 }
 
 
@@ -160,12 +155,12 @@ bool AerospikeDB::put (int64_t ki, const string& jsonstr)
 static uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
 static bool log_callback(as_log_level level, const char * func, const char * file, uint32_t line, const char * fmt, ...)
 {
-        va_list ap;
-        va_start(ap, fmt);
-        vprintf(fmt, ap);
-        printf("\n");
-        va_end(ap);
-        return true;
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    printf("\n");
+    va_end(ap);
+    return true;
 }
 
 int main (int argc, char **argv)
