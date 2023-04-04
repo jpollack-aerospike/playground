@@ -80,7 +80,11 @@ as_val * as_val_from_json (const json& jel)
     case json::value_t::number_float:			return (as_val *)as_double_new (jel.get<double>());
     case json::value_t::boolean:			return (as_val *)as_boolean_new (jel.get<bool>());
     case json::value_t::null:				return (as_val *)&as_nil;
+    case json::value_t::binary:				return (as_val *)as_bytes_new_wrap ((uint8_t *)jel.get_binary ().data (),jel.get_binary ().size (), false);
     }
+    
+    dieunless (false);
+    return nullptr;
 }
 
 
@@ -132,11 +136,15 @@ bool AerospikeDB::put (int64_t ki, const string& jsonstr)
     as_val *asv = as_val_from_json (j);
     as_record_set_map (&rec0, m_bin.c_str (), (as_map *) asv);
     as_error err;
-    if (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0) != AEROSPIKE_OK) {
+    switch (aerospike_key_put (&m_as, &err, NULL, &key0, &rec0)) {
+    case AEROSPIKE_ERR_RECORD_TOO_BIG:
+	fprintf (stderr, "record %lu too big, not inserted.  original string length: %lu\n", ki, jsonstr.length ());
+    case AEROSPIKE_OK:
+	return true;
+    default:
 	fprintf(stderr, "key:%lu\tas_val:%p\terr(%d) %s at [%s:%d]\n", ki, asv, err.code, err.message, err.file, err.line); 
-	return false;
     }
-    return true;
+    return false;
 }
 
 static uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
