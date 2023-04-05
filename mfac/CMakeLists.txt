@@ -20,6 +20,11 @@ fetchcontent_declare(
   GIT_REPOSITORY        "https://github.com/nlohmann/json.git"
   GIT_TAG               "v3.11.2")
 
+fetchcontent_declare(
+  concurrentqueue
+  GIT_REPOSITORY	"https://github.com/cameron314/concurrentqueue.git"
+  GIT_TAG		"master")
+
 set(AEROSPIKE_DIR "${CMAKE_CURRENT_BINARY_DIR}/aerospike-client-c-prefix")
 
 externalproject_add(
@@ -38,6 +43,7 @@ add_dependencies(aerospike aerospike-client-c)
 
 fetchcontent_makeavailable(nlohmann_json)
 fetchcontent_makeavailable(docopt)
+fetchcontent_makeavailable(concurrentqueue)
 
 add_executable(create_records common.cpp create_records.cpp)
 target_link_libraries(create_records docopt aerospike Threads::Threads)
@@ -46,4 +52,4 @@ add_executable(list_records common.cpp list_records.cpp)
 target_link_libraries(list_records docopt aerospike Threads::Threads)
 
 add_executable(load load.cpp)
-target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json Threads::Threads)
+target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json concurrentqueue Threads::Threads)

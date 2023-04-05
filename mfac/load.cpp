@@ -32,6 +32,7 @@
 #include <aerospike/as_hashmap.h>
 #include <aerospike/as_stringmap.h>
 #include <aerospike/as_nil.h>
+#include <concurrentqueue.h>
 
 inline void __dieunless (const char *msg, const char *file, int line) { fprintf (stderr, "[%s:%d] Assertion '%s' failed.\n", file, line, msg); abort (); }
 
@@ -50,6 +51,8 @@ options:
   --ns=STRING           Namespace [default: test]
   --set=STRING          Set Name [default: s0]
   --start=NUMBER        Key Start [default: 0]
+  --threads=NUMBER      Number of threads [default: 1]
+  --maxDepth=NUMBER     Maximum size of queue before we sleep [default: 16]
 
 )";
 
@@ -90,20 +93,27 @@ as_val * as_val_new_from_json (const json& jel)
 class AerospikeDB
 {
 public:
-    AerospikeDB (const string& hostport, const string& ns, const string& set, const string& bin);
+    AerospikeDB (const string& hostport, const string& ns, const string& set, const string& bin, int nthreads = 4);
     ~AerospikeDB ();
     bool put (int64_t ki, const string& jsonstr);
+    void queuePut (int64_t ki, const string& str) { m_q.enqueue (make_pair (ki, str)); }
+    int queueSize (void) { return m_q.size_approx (); }
 private:
     string m_ns;
     string m_set;
     string m_bin;
     aerospike m_as;
+    atomic<bool> m_running;
+    vector<thread> m_th;
+    moodycamel::ConcurrentQueue<pair<int64_t,string>> m_q;
+    void putWorker (void);
 };
 
-AerospikeDB::AerospikeDB (const string& hostport, const string& ns, const string& set, const string& bin)
+AerospikeDB::AerospikeDB (const string& hostport, const string& ns, const string& set, const string& bin, int nthreads)
     : m_ns (ns),
       m_set (set),
-      m_bin (bin)
+      m_bin (bin),
+      m_running (true)
 {
     size_t cpos = hostport.find (':');
     dieunless (cpos != string::npos);
@@ -117,10 +127,27 @@ AerospikeDB::AerospikeDB (const string& hostport, const string& ns, const string
 
     as_error err;
     dieunless (aerospike_connect (&m_as, &err) == AEROSPIKE_OK);
+    for (int i = 0; i < nthreads; i++)
+	m_th.emplace_back (&AerospikeDB::putWorker, this);
+}
+
+void AerospikeDB::putWorker (void)
+{
+    pair<int64_t,string> od;
+    while (m_running.load ()) {
+	while (!m_q.try_dequeue (od)) this_thread::yield ();
+	if (!m_running.load ()) break;
+	dieunless (this->put (od.first, od.second));
+    }
 }
 
 AerospikeDB::~AerospikeDB ()
 {
+    m_running.store (false);
+    m_q.enqueue (make_pair (-1, ""));
+    this_thread::yield ();
+
+    for (auto& th : m_th) th.join ();
     as_error err;
     dieunless (aerospike_close (&m_as, &err) == AEROSPIKE_OK);
 }
@@ -167,11 +194,21 @@ int main (int argc, char **argv)
 {
     auto d{docopt::docopt (USAGE,{argv+1,argv+argc})};
     int64_t kii = d["--start"].asLong ();
-    AerospikeDB db{d["--asdb"].asString (), d["--ns"].asString (), d["--set"].asString (), d["--bin"].asString ()};
-
+    int64_t kstart = kii;
+    AerospikeDB db{d["--asdb"].asString (), d["--ns"].asString (), d["--set"].asString (), d["--bin"].asString (), (int) d["--threads"].asLong ()};
     string line;
-    while (getline (std::cin, line))
-	dieunless (db.put (kii++, line));
+    uint64_t tstart = usec_now ();
+    uint64_t tlast = tstart;
+    uint64_t btot = 0;
+    while (getline (std::cin, line)) {
+	if (kii && !(kii & 0xFF)  && (usec_now () >= (tlast + 1000000)))
+	    printf ("{\"kstart\":%ld,\"k\":%ld,\"time\":%llu,\"bytes\":%llu,\"queued\":%d}\n", kstart, kii, (tlast = usec_now ()) - tstart, btot, db.queueSize ());
 
+	while (db.queueSize () > d["--maxDepth"].asLong ())
+	    this_thread::yield ();
+
+	btot += line.size ();
+	db.queuePut (kii++, line);
+    }
     return 0;
 }
