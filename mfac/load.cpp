@@ -135,8 +135,10 @@ void AerospikeDB::putWorker (void)
 {
     pair<int64_t,string> od;
     while (m_running.load ()) {
-	while (!m_q.try_dequeue (od)) this_thread::yield ();
-	if (!m_running.load ()) break;
+	while (!m_q.try_dequeue (od)) {
+	    this_thread::yield ();
+	    if (!m_running.load ()) return;
+	}
 	dieunless (this->put (od.first, od.second));
     }
 }
