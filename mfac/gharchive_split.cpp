@@ -31,7 +31,7 @@ inline void __dieunless (const char *msg, const char *file, int line) { fprintf 
 
 static uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
 static const char USAGE[] =
-    R"(usage: gharchive_split [options] 
+    R"(usage: gharchive_split [options]
 
 options:
   -h --help
@@ -40,29 +40,37 @@ options:
 )";
 
 
-int main (int argc, char **argv) 
-{ 
+int main (int argc, char **argv)
+{
     auto d{docopt::docopt (USAGE,{argv+1,argv+argc})};
     string opf = d["--prefix"].asString ();
-    
+
     unordered_map<string, ofstream*> fhm;
 
     string line;
     ofstream *osp{nullptr};
 
+    uint64_t tstart = usec_now ();
+    uint64_t tlast = tstart;
+    uint64_t lineno = 0;
+    uint64_t btot = 0;
     while (getline (std::cin, line)) {
 	json j = json::parse (line);
 	const string& tstr = j["type"];
 	auto s = fhm.find (tstr);
-	if (s == fhm.end ()) {	    
+	if (s == fhm.end ()) {
 	    fhm.emplace (tstr, osp = (new ofstream(opf + tstr + ".ndjson")));
 	} else {
 	    osp = s->second;
 	}
 	*osp << line << "\n";
+	if (!(++lineno & 0xFF) && (usec_now () >= (tlast + 1000000)))
+	    printf ("{\"lineno\":%llu,\"time\":%llu,\"bytes\":%llu}\n", lineno, (tlast = usec_now ()) - tstart, btot);
+	btot += line.size ();
     }
+    printf ("{\"lineno\":%llu,\"time\":%llu,\"bytes\":%llu}\n", lineno, (tlast = usec_now ()) - tstart, btot);
 
     for (auto& [k, v]: fhm)	v->close ();
-	
+
     return 0;
 }
