@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
-
 project(mfac LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)	
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -9,6 +9,10 @@ find_package(ZLIB REQUIRED)
 
 include(ExternalProject)
 include(FetchContent)
+
+set(JSONCONS_BUILD_TESTS OFF)
+set(jsoncons_BUILD_TESTS OFF)
+set(BUILD_TESTING OFF)
 
 fetchcontent_declare(
   docopt
@@ -24,6 +28,11 @@ fetchcontent_declare(
   concurrentqueue
   GIT_REPOSITORY	"https://github.com/cameron314/concurrentqueue.git"
   GIT_TAG		"master")
+
+fetchcontent_declare(
+  jsoncons
+  GIT_REPOSITORY	"https://github.com/danielaparker/jsoncons.git"
+  GIT_TAG		"v0.170.0")
 
 set(AEROSPIKE_DIR "${CMAKE_CURRENT_BINARY_DIR}/aerospike-client-c-prefix")
 
@@ -42,6 +51,7 @@ target_link_libraries(aerospike INTERFACE "${AEROSPIKE_DIR}/lib/libaerospike.a" 
 add_dependencies(aerospike aerospike-client-c)
 
 fetchcontent_makeavailable(nlohmann_json)
+fetchcontent_makeavailable(jsoncons)
 fetchcontent_makeavailable(docopt)
 fetchcontent_makeavailable(concurrentqueue)
 
@@ -56,3 +66,6 @@ target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json concurr
 
 add_executable(gharchive_split gharchive_split.cpp)
 target_link_libraries(gharchive_split docopt aerospike nlohmann_json::nlohmann_json Threads::Threads)
+
+add_executable(query query.cpp)
+target_link_libraries(query docopt aerospike jsoncons Threads::Threads)
