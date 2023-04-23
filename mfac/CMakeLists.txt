@@ -32,7 +32,7 @@ fetchcontent_declare(
 fetchcontent_declare(
   jsoncons
   GIT_REPOSITORY	"https://github.com/danielaparker/jsoncons.git"
-  GIT_TAG		"v0.170.0")
+  GIT_TAG		"8756e8091e3b5ee72981caaadbf17300a5683e7d")
 
 set(AEROSPIKE_DIR "${CMAKE_CURRENT_BINARY_DIR}/aerospike-client-c-prefix")
 
@@ -61,11 +61,11 @@ target_link_libraries(create_records docopt aerospike Threads::Threads)
 add_executable(list_records common.cpp list_records.cpp)
 target_link_libraries(list_records docopt aerospike Threads::Threads)
 
-add_executable(load load.cpp)
-target_link_libraries(load docopt aerospike nlohmann_json::nlohmann_json concurrentqueue Threads::Threads)
-
 add_executable(gharchive_split gharchive_split.cpp)
 target_link_libraries(gharchive_split docopt aerospike nlohmann_json::nlohmann_json Threads::Threads)
 
 add_executable(query query.cpp)
 target_link_libraries(query docopt aerospike jsoncons Threads::Threads)
+
+add_executable(getset getset.cpp)
+target_link_libraries(getset docopt aerospike jsoncons Threads::Threads)
