@@ -4,8 +4,7 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_CURSOR_HPP
-#define JSONCONS_MSGPACK_MSGPACK_CURSOR_HPP
+#pragma once
 
 #include <memory> // std::allocator
 #include <string>
@@ -20,10 +19,10 @@
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/staj_cursor.hpp>
 #include <jsoncons/source.hpp>
-#include <jsoncons_ext/msgpack/msgpack_parser.hpp>
 
-namespace jsoncons { 
-namespace msgpack {
+#include "msgpack_parser.hpp"
+
+namespace jsoncons { namespace asmsgpack {
 
 template<class Source=jsoncons::binary_stream_source,class Allocator=std::allocator<char>>
 class basic_msgpack_cursor : public basic_staj_cursor<char>, private virtual ser_context
@@ -337,7 +336,5 @@ using msgpack_stream_cursor = basic_msgpack_cursor<jsoncons::binary_stream_sourc
 using msgpack_bytes_cursor = basic_msgpack_cursor<jsoncons::bytes_source>;
 
 } // namespace msgpack
-} // namespace jsoncons
-
-#endif
+}
 

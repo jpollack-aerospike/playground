@@ -4,8 +4,7 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_ENCODER_HPP
-#define JSONCONS_MSGPACK_MSGPACK_ENCODER_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -17,17 +16,17 @@
 #include <jsoncons/config/jsoncons_config.hpp>
 #include <jsoncons/sink.hpp>
 #include <jsoncons/detail/parse_number.hpp>
-#include <jsoncons_ext/msgpack/msgpack_type.hpp>
-#include <jsoncons_ext/msgpack/msgpack_error.hpp>
-#include <jsoncons_ext/msgpack/msgpack_options.hpp>
 
-namespace jsoncons { 
-namespace msgpack {
+#include "msgpack_type.hpp"
+#include "msgpack_error.hpp"
+#include "msgpack_options.hpp"
+
+namespace jsoncons { namespace asmsgpack {
 
     enum class msgpack_container_type {object, array};
 
     template<class Sink=jsoncons::binary_stream_sink,class Allocator=std::allocator<char>>
-    class basic_msgpack_encoder final : public basic_json_visitor<char>
+    class basic_msgpack_encoder final : public jsoncons::basic_json_visitor<char>
     {
         enum class decimal_parse_state { start, integer, exp1, exp2, fraction1 };
 
@@ -37,7 +36,7 @@ namespace msgpack {
     public:
         using allocator_type = Allocator;
         using char_type = char;
-        using typename basic_json_visitor<char>::string_view_type;
+        using typename jsoncons::basic_json_visitor<char>::string_view_type;
         using sink_type = Sink;
 
     private:
@@ -120,13 +119,13 @@ namespace msgpack {
             sink_.flush();
         }
 
-        bool visit_begin_object(semantic_tag, const ser_context&, std::error_code& ec) override
+        bool visit_begin_object(jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code& ec) override
         {
             ec = msgpack_errc::object_length_required;
             return false;
         }
 
-        bool visit_begin_object(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) override
+        bool visit_begin_object(std::size_t length, jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code& ec) override
         {
             if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
             {
@@ -138,27 +137,27 @@ namespace msgpack {
             if (length <= 15)
             {
                 // fixmap
-                sink_.push_back(jsoncons::msgpack::msgpack_type::fixmap_base_type | (length & 0xf));
+                sink_.push_back(asmsgpack::msgpack_type::fixmap_base_type | (length & 0xf));
             }
             else if (length <= 65535)
             {
                 // map 16
-                sink_.push_back(jsoncons::msgpack::msgpack_type::map16_type);
-                binary::native_to_big(static_cast<uint16_t>(length), 
+                sink_.push_back(asmsgpack::msgpack_type::map16_type);
+                jsoncons::binary::native_to_big(static_cast<uint16_t>(length), 
                                       std::back_inserter(sink_));
             }
             else if (length <= 4294967295)
             {
                 // map 32
-                sink_.push_back(jsoncons::msgpack::msgpack_type::map32_type);
-                binary::native_to_big(static_cast<uint32_t>(length),
+                sink_.push_back(asmsgpack::msgpack_type::map32_type);
+                jsoncons::binary::native_to_big(static_cast<uint32_t>(length),
                                       std::back_inserter(sink_));
             }
 
             return true;
         }
 
-        bool visit_end_object(const ser_context&, std::error_code& ec) override
+        bool visit_end_object(const jsoncons::ser_context&, std::error_code& ec) override
         {
             JSONCONS_ASSERT(!stack_.empty());
             --nesting_depth_;
@@ -179,13 +178,13 @@ namespace msgpack {
             return true;
         }
 
-        bool visit_begin_array(semantic_tag, const ser_context&, std::error_code& ec) override
+        bool visit_begin_array(jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code& ec) override
         {
             ec = msgpack_errc::array_length_required;
             return false;
         }
 
-        bool visit_begin_array(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) override
+        bool visit_begin_array(std::size_t length, jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code& ec) override
         {
             if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
             {
@@ -196,24 +195,24 @@ namespace msgpack {
             if (length <= 15)
             {
                 // fixarray
-                sink_.push_back(jsoncons::msgpack::msgpack_type::fixarray_base_type | (length & 0xf));
+                sink_.push_back(asmsgpack::msgpack_type::fixarray_base_type | (length & 0xf));
             }
             else if (length <= (std::numeric_limits<uint16_t>::max)())
             {
                 // array 16
-                sink_.push_back(jsoncons::msgpack::msgpack_type::array16_type);
-                binary::native_to_big(static_cast<uint16_t>(length),std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::array16_type);
+                jsoncons::binary::native_to_big(static_cast<uint16_t>(length),std::back_inserter(sink_));
             }
             else if (length <= (std::numeric_limits<uint32_t>::max)())
             {
                 // array 32
-                sink_.push_back(jsoncons::msgpack::msgpack_type::array32_type);
-                binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::array32_type);
+                jsoncons::binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
             }
             return true;
         }
 
-        bool visit_end_array(const ser_context&, std::error_code& ec) override
+        bool visit_end_array(const jsoncons::ser_context&, std::error_code& ec) override
         {
             JSONCONS_ASSERT(!stack_.empty());
 
@@ -235,16 +234,16 @@ namespace msgpack {
             return true;
         }
 
-        bool visit_key(const string_view_type& name, const ser_context&, std::error_code&) override
+        bool visit_key(const string_view_type& name, const jsoncons::ser_context&, std::error_code&) override
         {
             write_string_value(name);
             return true;
         }
 
-        bool visit_null(semantic_tag, const ser_context&, std::error_code&) override
+        bool visit_null(jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code&) override
         {
             // nil
-            sink_.push_back(jsoncons::msgpack::msgpack_type::nil_type);
+            sink_.push_back(asmsgpack::msgpack_type::nil_type);
             end_value();
             return true;
         }
@@ -257,34 +256,34 @@ namespace msgpack {
                 if ((data64 & 0xffffffff00000000L) == 0) 
                 {
                     // timestamp 32
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext4_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext4_type);
                     sink_.push_back(0xff);
-                    binary::native_to_big(static_cast<uint32_t>(data64), std::back_inserter(sink_));
+                    jsoncons::binary::native_to_big(static_cast<uint32_t>(data64), std::back_inserter(sink_));
                 }
                 else 
                 {
                     // timestamp 64
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext8_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext8_type);
                     sink_.push_back(0xff);
-                    binary::native_to_big(static_cast<uint64_t>(data64), std::back_inserter(sink_));
+                    jsoncons::binary::native_to_big(static_cast<uint64_t>(data64), std::back_inserter(sink_));
                 }
             }
             else 
             {
                 // timestamp 96
-                sink_.push_back(jsoncons::msgpack::msgpack_type::ext8_type);
+                sink_.push_back(asmsgpack::msgpack_type::ext8_type);
                 sink_.push_back(0x0c); // 12
                 sink_.push_back(0xff);
-                binary::native_to_big(static_cast<uint32_t>(nanoseconds), std::back_inserter(sink_));
-                binary::native_to_big(static_cast<uint64_t>(seconds), std::back_inserter(sink_));
+                jsoncons::binary::native_to_big(static_cast<uint32_t>(nanoseconds), std::back_inserter(sink_));
+                jsoncons::binary::native_to_big(static_cast<uint64_t>(seconds), std::back_inserter(sink_));
             }
         }
 
-        bool visit_string(const string_view_type& sv, semantic_tag tag, const ser_context&, std::error_code& ec) override
+        bool visit_string(const string_view_type& sv, jsoncons::semantic_tag tag, const jsoncons::ser_context&, std::error_code& ec) override
         {
             switch (tag)
             {
-                case semantic_tag::epoch_second:
+                case jsoncons::semantic_tag::epoch_second:
                 {
                     int64_t seconds;
                     auto result = jsoncons::detail::to_integer(sv.data(), sv.length(), seconds);
@@ -296,13 +295,13 @@ namespace msgpack {
                     write_timestamp(seconds, 0);
                     break;
                 }
-                case semantic_tag::epoch_milli:
+                case jsoncons::semantic_tag::epoch_milli:
                 {
-                    bigint n = bigint::from_string(sv.data(), sv.length());
+                    jsoncons::bigint n = jsoncons::bigint::from_string(sv.data(), sv.length());
                     if (n != 0)
                     {
-                        bigint q;
-                        bigint rem;
+                        jsoncons::bigint q;
+                        jsoncons::bigint rem;
                         n.divide(millis_in_second, q, rem, true);
                         int64_t seconds = static_cast<int64_t>(q);
                         int64_t nanoseconds = static_cast<int64_t>(rem) * nanos_in_milli;
@@ -318,13 +317,13 @@ namespace msgpack {
                     }
                     break;
                 }
-                case semantic_tag::epoch_nano:
+                case jsoncons::semantic_tag::epoch_nano:
                 {
-                    bigint n = bigint::from_string(sv.data(), sv.length());
+                    jsoncons::bigint n = jsoncons::bigint::from_string(sv.data(), sv.length());
                     if (n != 0)
                     {
-                        bigint q;
-                        bigint rem;
+                        jsoncons::bigint q;
+                        jsoncons::bigint rem;
                         n.divide(nanos_in_second, q, rem, true);
                         int64_t seconds = static_cast<int64_t>(q);
                         int64_t nanoseconds = static_cast<int64_t>(rem);
@@ -352,8 +351,8 @@ namespace msgpack {
 
         void write_string_value(const string_view_type& sv) 
         {
-            auto sink = unicode_traits::validate(sv.data(), sv.size());
-            if (sink.ec != unicode_traits::conv_errc())
+            auto sink = jsoncons::unicode_traits::validate(sv.data(), sv.size());
+            if (sink.ec != jsoncons::unicode_traits::conv_errc())
             {
                 JSONCONS_THROW(ser_error(msgpack_errc::invalid_utf8_text_string));
             }
@@ -362,25 +361,25 @@ namespace msgpack {
             if (length <= 31)
             {
                 // fixstr stores a byte array whose length is upto 31 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::fixstr_base_type | static_cast<uint8_t>(length));
+                sink_.push_back(asmsgpack::msgpack_type::fixstr_base_type | static_cast<uint8_t>(length));
             }
             else if (length <= (std::numeric_limits<uint8_t>::max)())
             {
                 // str 8 stores a byte array whose length is upto (2^8)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::str8_type);
+                sink_.push_back(asmsgpack::msgpack_type::str8_type);
                 sink_.push_back(static_cast<uint8_t>(length));
             }
             else if (length <= (std::numeric_limits<uint16_t>::max)())
             {
                 // str 16 stores a byte array whose length is upto (2^16)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::str16_type);
-                binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::str16_type);
+                jsoncons::binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
             }
             else if (length <= (std::numeric_limits<uint32_t>::max)())
             {
                 // str 32 stores a byte array whose length is upto (2^32)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::str32_type);
-                binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::str32_type);
+                jsoncons::binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
             }
 
             for (auto c : sv)
@@ -389,9 +388,9 @@ namespace msgpack {
             }
         }
 
-        bool visit_byte_string(const byte_string_view& b, 
-                               semantic_tag, 
-                               const ser_context&,
+        bool visit_byte_string(const jsoncons::byte_string_view& b, 
+                               jsoncons::semantic_tag, 
+                               const jsoncons::ser_context&,
                                std::error_code&) override
         {
 
@@ -399,20 +398,20 @@ namespace msgpack {
             if (length <= (std::numeric_limits<uint8_t>::max)())
             {
                 // bin 8 stores a byte array whose length is upto (2^8)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::bin8_type);
+                sink_.push_back(asmsgpack::msgpack_type::bin8_type);
                 sink_.push_back(static_cast<uint8_t>(length));
             }
             else if (length <= (std::numeric_limits<uint16_t>::max)())
             {
                 // bin 16 stores a byte array whose length is upto (2^16)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::bin16_type);
-                binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::bin16_type);
+                jsoncons::binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
             }
             else if (length <= (std::numeric_limits<uint32_t>::max)())
             {
                 // bin 32 stores a byte array whose length is upto (2^32)-1 bytes
-                sink_.push_back(jsoncons::msgpack::msgpack_type::bin32_type);
-                binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::bin32_type);
+                jsoncons::binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
             }
 
             for (auto c : b)
@@ -424,51 +423,51 @@ namespace msgpack {
             return true;
         }
 
-        bool visit_byte_string(const byte_string_view& b, 
+        bool visit_byte_string(const jsoncons::byte_string_view& b, 
                                uint64_t ext_tag, 
-                               const ser_context&,
+                               const jsoncons::ser_context&,
                                std::error_code&) override
         {
             const std::size_t length = b.size();
             switch (length)
             {
                 case 1:
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext1_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext1_type);
                     sink_.push_back(static_cast<uint8_t>(ext_tag));
                     break;
                 case 2:
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext2_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext2_type);
                     sink_.push_back(static_cast<uint8_t>(ext_tag));
                     break;
                 case 4:
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext4_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext4_type);
                     sink_.push_back(static_cast<uint8_t>(ext_tag));
                     break;
                 case 8:
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext8_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext8_type);
                     sink_.push_back(static_cast<uint8_t>(ext_tag));
                     break;
                 case 16:
-                    sink_.push_back(jsoncons::msgpack::msgpack_type::fixext16_type);
+                    sink_.push_back(asmsgpack::msgpack_type::fixext16_type);
                     sink_.push_back(static_cast<uint8_t>(ext_tag));
                     break;
                 default:
                     if (length <= (std::numeric_limits<uint8_t>::max)())
                     {
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::ext8_type);
+                        sink_.push_back(asmsgpack::msgpack_type::ext8_type);
                         sink_.push_back(static_cast<uint8_t>(length));
                         sink_.push_back(static_cast<uint8_t>(ext_tag));
                     }
                     else if (length <= (std::numeric_limits<uint16_t>::max)())
                     {
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::ext16_type);
-                        binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
+                        sink_.push_back(asmsgpack::msgpack_type::ext16_type);
+                        jsoncons::binary::native_to_big(static_cast<uint16_t>(length), std::back_inserter(sink_));
                         sink_.push_back(static_cast<uint8_t>(ext_tag));
                     }
                     else if (length <= (std::numeric_limits<uint32_t>::max)())
                     {
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::ext32_type);
-                        binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
+                        sink_.push_back(asmsgpack::msgpack_type::ext32_type);
+                        jsoncons::binary::native_to_big(static_cast<uint32_t>(length),std::back_inserter(sink_));
                         sink_.push_back(static_cast<uint8_t>(ext_tag));
                     }
                     break;
@@ -484,22 +483,22 @@ namespace msgpack {
         }
 
         bool visit_double(double val, 
-                             semantic_tag,
-                             const ser_context&,
+                             jsoncons::semantic_tag,
+                             const jsoncons::ser_context&,
                              std::error_code&) override
         {
             float valf = (float)val;
             if ((double)valf == val)
             {
                 // float 32
-                sink_.push_back(jsoncons::msgpack::msgpack_type::float32_type);
-                binary::native_to_big(valf,std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::float32_type);
+                jsoncons::binary::native_to_big(valf,std::back_inserter(sink_));
             }
             else
             {
                 // float 64
-                sink_.push_back(jsoncons::msgpack::msgpack_type::float64_type);
-                binary::native_to_big(val,std::back_inserter(sink_));
+                sink_.push_back(asmsgpack::msgpack_type::float64_type);
+                jsoncons::binary::native_to_big(val,std::back_inserter(sink_));
             }
 
             // write double
@@ -509,16 +508,16 @@ namespace msgpack {
         }
 
         bool visit_int64(int64_t val, 
-                         semantic_tag tag, 
-                         const ser_context&,
+                         jsoncons::semantic_tag tag, 
+                         const jsoncons::ser_context&,
                          std::error_code&) override
         {
             switch (tag)
             {
-                case semantic_tag::epoch_second:
+                case jsoncons::semantic_tag::epoch_second:
                     write_timestamp(val, 0);
                     break;
-                case semantic_tag::epoch_milli:
+                case jsoncons::semantic_tag::epoch_milli:
                 {
                     if (val != 0)
                     {
@@ -537,7 +536,7 @@ namespace msgpack {
                     }
                     break;
                 }
-                case semantic_tag::epoch_nano:
+                case jsoncons::semantic_tag::epoch_nano:
                 {
                     if (val != 0)
                     {
@@ -568,26 +567,26 @@ namespace msgpack {
                         else if (val <= (std::numeric_limits<uint8_t>::max)())
                         {
                             // uint 8 stores a 8-bit unsigned integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::uint8_type);
+                            sink_.push_back(asmsgpack::msgpack_type::uint8_type);
                             sink_.push_back(static_cast<uint8_t>(val));
                         }
                         else if (val <= (std::numeric_limits<uint16_t>::max)())
                         {
                             // uint 16 stores a 16-bit big-endian unsigned integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::uint16_type);
-                            binary::native_to_big(static_cast<uint16_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::uint16_type);
+                            jsoncons::binary::native_to_big(static_cast<uint16_t>(val),std::back_inserter(sink_));
                         }
                         else if (val <= (std::numeric_limits<uint32_t>::max)())
                         {
                             // uint 32 stores a 32-bit big-endian unsigned integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::uint32_type);
-                            binary::native_to_big(static_cast<uint32_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::uint32_type);
+                            jsoncons::binary::native_to_big(static_cast<uint32_t>(val),std::back_inserter(sink_));
                         }
                         else if (val <= (std::numeric_limits<int64_t>::max)())
                         {
                             // int 64 stores a 64-bit big-endian signed integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::uint64_type);
-                            binary::native_to_big(static_cast<uint64_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::uint64_type);
+                            jsoncons::binary::native_to_big(static_cast<uint64_t>(val),std::back_inserter(sink_));
                         }
                     }
                     else
@@ -595,31 +594,31 @@ namespace msgpack {
                         if (val >= -32)
                         {
                             // negative fixnum stores 5-bit negative integer
-                            binary::native_to_big(static_cast<int8_t>(val), std::back_inserter(sink_));
+                            jsoncons::binary::native_to_big(static_cast<int8_t>(val), std::back_inserter(sink_));
                         }
                         else if (val >= (std::numeric_limits<int8_t>::lowest)())
                         {
                             // int 8 stores a 8-bit signed integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::int8_type);
-                            binary::native_to_big(static_cast<int8_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::int8_type);
+                            jsoncons::binary::native_to_big(static_cast<int8_t>(val),std::back_inserter(sink_));
                         }
                         else if (val >= (std::numeric_limits<int16_t>::lowest)())
                         {
                             // int 16 stores a 16-bit big-endian signed integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::int16_type);
-                            binary::native_to_big(static_cast<int16_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::int16_type);
+                            jsoncons::binary::native_to_big(static_cast<int16_t>(val),std::back_inserter(sink_));
                         }
                         else if (val >= (std::numeric_limits<int32_t>::lowest)())
                         {
                             // int 32 stores a 32-bit big-endian signed integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::int32_type);
-                            binary::native_to_big(static_cast<int32_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::int32_type);
+                            jsoncons::binary::native_to_big(static_cast<int32_t>(val),std::back_inserter(sink_));
                         }
                         else if (val >= (std::numeric_limits<int64_t>::lowest)())
                         {
                             // int 64 stores a 64-bit big-endian signed integer
-                            sink_.push_back(jsoncons::msgpack::msgpack_type::int64_type);
-                            binary::native_to_big(static_cast<int64_t>(val),std::back_inserter(sink_));
+                            sink_.push_back(asmsgpack::msgpack_type::int64_type);
+                            jsoncons::binary::native_to_big(static_cast<int64_t>(val),std::back_inserter(sink_));
                         }
                     }
                 }
@@ -630,16 +629,16 @@ namespace msgpack {
         }
 
         bool visit_uint64(uint64_t val, 
-                          semantic_tag tag, 
-                          const ser_context&,
+                          jsoncons::semantic_tag tag, 
+                          const jsoncons::ser_context&,
                           std::error_code&) override
         {
             switch (tag)
             {
-                case semantic_tag::epoch_second:
+                case jsoncons::semantic_tag::epoch_second:
                     write_timestamp(static_cast<int64_t>(val), 0);
                     break;
-                case semantic_tag::epoch_milli:
+                case jsoncons::semantic_tag::epoch_milli:
                 {
                     if (val != 0)
                     {
@@ -658,7 +657,7 @@ namespace msgpack {
                     }
                     break;
                 }
-                case semantic_tag::epoch_nano:
+                case jsoncons::semantic_tag::epoch_nano:
                 {
                     if (val != 0)
                     {
@@ -687,26 +686,26 @@ namespace msgpack {
                     else if (val <= (std::numeric_limits<uint8_t>::max)())
                     {
                         // uint 8 stores a 8-bit unsigned integer
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::uint8_type);
+                        sink_.push_back(asmsgpack::msgpack_type::uint8_type);
                         sink_.push_back(static_cast<uint8_t>(val));
                     }
                     else if (val <= (std::numeric_limits<uint16_t>::max)())
                     {
                         // uint 16 stores a 16-bit big-endian unsigned integer
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::uint16_type);
-                        binary::native_to_big(static_cast<uint16_t>(val),std::back_inserter(sink_));
+                        sink_.push_back(asmsgpack::msgpack_type::uint16_type);
+                        jsoncons::binary::native_to_big(static_cast<uint16_t>(val),std::back_inserter(sink_));
                     }
                     else if (val <= (std::numeric_limits<uint32_t>::max)())
                     {
                         // uint 32 stores a 32-bit big-endian unsigned integer
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::uint32_type);
-                        binary::native_to_big(static_cast<uint32_t>(val),std::back_inserter(sink_));
+                        sink_.push_back(asmsgpack::msgpack_type::uint32_type);
+                        jsoncons::binary::native_to_big(static_cast<uint32_t>(val),std::back_inserter(sink_));
                     }
                     else if (val <= (std::numeric_limits<uint64_t>::max)())
                     {
                         // uint 64 stores a 64-bit big-endian unsigned integer
-                        sink_.push_back(jsoncons::msgpack::msgpack_type::uint64_type);
-                        binary::native_to_big(static_cast<uint64_t>(val),std::back_inserter(sink_));
+                        sink_.push_back(asmsgpack::msgpack_type::uint64_type);
+                        jsoncons::binary::native_to_big(static_cast<uint64_t>(val),std::back_inserter(sink_));
                     }
                     break;
                 }
@@ -715,10 +714,10 @@ namespace msgpack {
             return true;
         }
 
-        bool visit_bool(bool val, semantic_tag, const ser_context&, std::error_code&) override
+        bool visit_bool(bool val, jsoncons::semantic_tag, const jsoncons::ser_context&, std::error_code&) override
         {
             // true and false
-            sink_.push_back(static_cast<uint8_t>(val ? jsoncons::msgpack::msgpack_type::true_type : jsoncons::msgpack::msgpack_type::false_type));
+            sink_.push_back(static_cast<uint8_t>(val ? asmsgpack::msgpack_type::true_type : asmsgpack::msgpack_type::false_type));
 
             end_value();
             return true;
@@ -748,6 +747,4 @@ namespace msgpack {
     #endif
 
 } // namespace msgpack
-} // namespace jsoncons
-
-#endif
+}

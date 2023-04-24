@@ -4,8 +4,7 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_ENCODE_MSGPACK_HPP
-#define JSONCONS_MSGPACK_ENCODE_MSGPACK_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -14,16 +13,16 @@
 #include <istream> // std::basic_istream
 #include <jsoncons/json.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons_ext/msgpack/msgpack_encoder.hpp>
-#include <jsoncons_ext/msgpack/msgpack_reader.hpp>
 
-namespace jsoncons { 
-namespace msgpack {
+#include "msgpack_encoder.hpp"
+#include "msgpack_reader.hpp"
+
+namespace jsoncons { namespace asmsgpack {
 
     template<class T, class Container>
     typename std::enable_if<traits_extension::is_basic_json<T>::value &&
                             traits_extension::is_back_insertable_byte_container<Container>::value,void>::type 
-    encode_msgpack(const T& j, 
+    encode_asmsgpack(const T& j, 
                    Container& v, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -36,7 +35,7 @@ namespace msgpack {
     template<class T, class Container>
     typename std::enable_if<!traits_extension::is_basic_json<T>::value &&
                             traits_extension::is_back_insertable_byte_container<Container>::value,void>::type 
-    encode_msgpack(const T& val, 
+    encode_asmsgpack(const T& val, 
                    Container& v, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -51,7 +50,7 @@ namespace msgpack {
 
     template<class T>
     typename std::enable_if<traits_extension::is_basic_json<T>::value,void>::type 
-    encode_msgpack(const T& j, 
+    encode_asmsgpack(const T& j, 
                    std::ostream& os, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -63,7 +62,7 @@ namespace msgpack {
 
     template<class T>
     typename std::enable_if<!traits_extension::is_basic_json<T>::value,void>::type 
-    encode_msgpack(const T& val, 
+    encode_asmsgpack(const T& val, 
                    std::ostream& os, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -81,7 +80,7 @@ namespace msgpack {
     template<class T, class Container, class TempAllocator>
     typename std::enable_if<traits_extension::is_basic_json<T>::value &&
                             traits_extension::is_back_insertable_byte_container<Container>::value,void>::type 
-    encode_msgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, const T& j, 
+    encode_asmsgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, const T& j, 
                    Container& v, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -94,7 +93,7 @@ namespace msgpack {
     template<class T, class Container, class TempAllocator>
     typename std::enable_if<!traits_extension::is_basic_json<T>::value &&
                             traits_extension::is_back_insertable_byte_container<Container>::value,void>::type 
-    encode_msgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
+    encode_asmsgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
                    const T& val, Container& v, 
                    const msgpack_encode_options& options = msgpack_encode_options())
     {
@@ -109,7 +108,7 @@ namespace msgpack {
 
     template<class T,class TempAllocator>
     typename std::enable_if<traits_extension::is_basic_json<T>::value,void>::type 
-    encode_msgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
+    encode_asmsgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
                    const T& j, 
                    std::ostream& os, 
                    const msgpack_encode_options& options = msgpack_encode_options())
@@ -122,7 +121,7 @@ namespace msgpack {
 
     template<class T,class TempAllocator>
     typename std::enable_if<!traits_extension::is_basic_json<T>::value,void>::type 
-    encode_msgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
+    encode_asmsgpack(temp_allocator_arg_t, const TempAllocator& temp_alloc, 
                    const T& val, 
                    std::ostream& os, 
                    const msgpack_encode_options& options = msgpack_encode_options())
@@ -139,4 +138,3 @@ namespace msgpack {
 } // msgpack
 } // jsoncons
 
-#endif

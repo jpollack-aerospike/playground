@@ -4,14 +4,12 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_TYPE_HPP
-#define JSONCONS_MSGPACK_MSGPACK_TYPE_HPP
-
+#pragma once
 #include <string>
 #include <memory>
 #include <jsoncons/config/jsoncons_config.hpp>
 
-namespace jsoncons { namespace msgpack {
+namespace jsoncons { namespace asmsgpack {
 
     namespace msgpack_type
     {
@@ -58,6 +56,5 @@ namespace jsoncons { namespace msgpack {
     }
  
 } // namespace msgpack
-} // namespace jsoncons
 
-#endif
+}

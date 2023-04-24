@@ -4,13 +4,12 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_ERROR_HPP
-#define JSONCONS_MSGPACK_MSGPACK_ERROR_HPP
+#pragma once
 
 #include <system_error>
 #include <jsoncons/config/jsoncons_config.hpp>
 
-namespace jsoncons { namespace msgpack {
+namespace jsoncons { namespace asmsgpack {
 
 enum class msgpack_errc
 {
@@ -82,13 +81,12 @@ std::error_code make_error_code(msgpack_errc e)
 }
 
 
-}}
+}
+}
 
 namespace std {
     template<>
-    struct is_error_code_enum<jsoncons::msgpack::msgpack_errc> : public true_type
+    struct is_error_code_enum<jsoncons::asmsgpack::msgpack_errc> : public true_type
     {
     };
 }
-
-#endif

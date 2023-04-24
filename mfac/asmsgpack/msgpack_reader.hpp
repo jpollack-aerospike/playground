@@ -4,9 +4,7 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_READER_HPP
-#define JSONCONS_MSGPACK_MSGPACK_READER_HPP
-
+#pragma once
 #include <string>
 #include <vector>
 #include <memory>
@@ -15,11 +13,12 @@
 #include <jsoncons/source.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons_ext/msgpack/msgpack_type.hpp>
-#include <jsoncons_ext/msgpack/msgpack_error.hpp>
-#include <jsoncons_ext/msgpack/msgpack_parser.hpp>
 
-namespace jsoncons { namespace msgpack {
+#include "msgpack_type.hpp"
+#include "msgpack_error.hpp"
+#include "msgpack_parser.hpp"
+
+namespace jsoncons { namespace asmsgpack {
 
 template <class Source,class Allocator=std::allocator<char>>
 class basic_msgpack_reader
@@ -112,5 +111,3 @@ JSONCONS_DEPRECATED_MSG("Instead, use msgpack_bytes_reader") typedef msgpack_byt
 #endif
 
 }}
-
-#endif

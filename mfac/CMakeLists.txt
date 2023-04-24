@@ -68,4 +68,4 @@ add_executable(query query.cpp)
 target_link_libraries(query docopt aerospike jsoncons Threads::Threads)
 
 add_executable(getset getset.cpp)
-target_link_libraries(getset docopt aerospike jsoncons Threads::Threads)
+target_link_libraries(getset docopt aerospike jsoncons concurrentqueue Threads::Threads)

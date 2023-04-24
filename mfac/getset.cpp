@@ -20,7 +20,7 @@
 #include <iostream>
 #include <jsoncons/json.hpp>
 #include <jsoncons_ext/jsonpath/jsonpath.hpp>
-#include <jsoncons_ext/msgpack/msgpack.hpp>
+#include "asmsgpack.hpp"
 #include <map>
 #include <memory>
 #include <openssl/sha.h>
@@ -278,21 +278,42 @@ int main (int argc, char **argv)
 
     for (auto ii=0; ii<1; ii++) {
 	as_record *rp = db.get (kii + ii);
+	dieunless (rp);
 
-	as_bytes *mbp = as_record_get_bytes (rp, "map");
-	const char *str = as_record_get_str (rp, "str");
-	dieunless (mbp && str);
-	
-	vector<uint8_t> vec (mbp->value, mbp->value + mbp->size);
-	json j0 = json::parse (str);
-	json j1 = jsoncons::msgpack::decode_msgpack<json>(vec);
-	cout << j0 << "\n";
-	cout << j1 << "\n";
 
-	string hxmap = hexstring (mbp->value, mbp->size);
+	{
+	    const char *str = as_record_get_str (rp, "str");
+	    dieunless (str);
+	    json j0 = json::parse (str);
+	    cout << strlen (str) << "\t" << str << "\n";
+	    cout << jsoncons::pretty_print (j0) << "\n";
+	}
 	
-	printf ("map:\t%d %d 0x%s\t", mbp->type, mbp->size, hxmap.c_str ());
-	printf ("str:\t%s\t", str);
+	
+	{
+	    as_bytes *mapb = as_record_get_bytes (rp, "map");
+	    dieunless (mapb);
+	    // json j1 = jsoncons::asmsgpack::decode_asmsgpack<json>(mapb->value, mapb->value + mapb->size);
+	    jsoncons::asmsgpack::basic_msgpack_cursor<jsoncons::binary_iterator_source<uint8_t *>> cursor (jsoncons::binary_iterator_source<uint8_t *>(mapb->value, mapb->value + mapb->size),
+													   jsoncons::asmsgpack::msgpack_decode_options ());
+
+	    jsoncons::json_decoder<json> decoder{};
+	    std::error_code ec;
+	    json j1 = jsoncons::decode_traits<json,char>::decode (cursor, decoder, ec);
+	    if (ec) {  JSONCONS_THROW(jsoncons::ser_error(ec, cursor.context().line(), cursor.context().column())); }
+	    cout << mapb->size << "\t" << hexstring (mapb->value, mapb->size) << "\n";
+	    cout << jsoncons::pretty_print (j1) << "\n";
+	}
+
+	{
+	    as_bytes *mpkb = as_record_get_bytes (rp, "msgpack");
+	    dieunless (mpkb);
+	    json j2 = jsoncons::asmsgpack::decode_asmsgpack<json>(mpkb->value, mpkb->value + mpkb->size);
+	    cout << mpkb->size << "\t" << hexstring (mpkb->value, mpkb->size) << "\n";
+	    cout << jsoncons::pretty_print (j2) << "\n";
+	}
+
+	    
 	as_record_destroy (rp); 
 	printf ("\n");
 	

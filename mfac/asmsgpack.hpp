@@ -4,8 +4,7 @@
 
 // See https://github.com/danielaparker/jsoncons for latest version
 
-#ifndef JSONCONS_MSGPACK_MSGPACK_HPP
-#define JSONCONS_MSGPACK_MSGPACK_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -14,11 +13,9 @@
 #include <istream> // std::basic_istream
 #include <jsoncons/json.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons_ext/msgpack/msgpack_encoder.hpp>
-#include <jsoncons_ext/msgpack/msgpack_reader.hpp>
-#include <jsoncons_ext/msgpack/msgpack_cursor.hpp>
-#include <jsoncons_ext/msgpack/encode_msgpack.hpp>
-#include <jsoncons_ext/msgpack/decode_msgpack.hpp>
-
-#endif
+#include "asmsgpack/msgpack_encoder.hpp"
+#include "asmsgpack/msgpack_reader.hpp"
+#include "asmsgpack/msgpack_cursor.hpp"
+#include "asmsgpack/encode_msgpack.hpp"
+#include "asmsgpack/decode_msgpack.hpp"
 
