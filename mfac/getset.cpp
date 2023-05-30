@@ -243,6 +243,9 @@ int64_t AerospikeDB::nextSpc (int64_t ki)
     while (exists (ki + (1 << si)))  // move out with exponential jumps.  could be parallized.
 	si++;
 
+    if (si == 0)
+	return 1;
+    
     int64_t lp{ki + (1 << (si - 1))}, up{ki + (1 << si)}; // lp exists, up doesn't exist, bisect to find first not found
     while ((up - lp) > 1) {
 	const int64_t mp = ((lp ^ up) >> 1) + (lp & up); // overflow safe midpoint
@@ -282,27 +285,67 @@ int main (int argc, char **argv)
 
 
 	{
-	    const char *str = as_record_get_str (rp, "str");
-	    dieunless (str);
-	    json j0 = json::parse (str);
-	    cout << strlen (str) << "\t" << str << "\n";
-	    cout << jsoncons::pretty_print (j0) << "\n";
-	}
-	
-	
-	{
 	    as_bytes *mapb = as_record_get_bytes (rp, "map");
 	    dieunless (mapb);
 	    // json j1 = jsoncons::asmsgpack::decode_asmsgpack<json>(mapb->value, mapb->value + mapb->size);
 	    jsoncons::asmsgpack::basic_msgpack_cursor<jsoncons::binary_iterator_source<uint8_t *>> cursor (jsoncons::binary_iterator_source<uint8_t *>(mapb->value, mapb->value + mapb->size),
 													   jsoncons::asmsgpack::msgpack_decode_options ());
 
-	    jsoncons::json_decoder<json> decoder{};
 	    std::error_code ec;
-	    json j1 = jsoncons::decode_traits<json,char>::decode (cursor, decoder, ec);
-	    if (ec) {  JSONCONS_THROW(jsoncons::ser_error(ec, cursor.context().line(), cursor.context().column())); }
-	    cout << mapb->size << "\t" << hexstring (mapb->value, mapb->size) << "\n";
-	    cout << jsoncons::pretty_print (j1) << "\n";
+	    while (!cursor.done ()) 
+	    {
+		const auto& event = cursor.current();
+		switch (event.event_type())
+		{
+		case jsoncons::staj_event_type::begin_array:
+		    std::cout << event.event_type() << "\n";
+		    break;
+		case jsoncons::staj_event_type::end_array:
+		    std::cout << event.event_type() << "\n";
+		    break;
+		case jsoncons::staj_event_type::begin_object:
+		    std::cout << event.event_type() << "\n";
+		    break;
+		case jsoncons::staj_event_type::end_object:
+		    std::cout << event.event_type() << "\n";
+		    break;
+		case jsoncons::staj_event_type::key:
+		    // Or std::string_view, if supported
+		    std::cout << event.event_type() << ": " << event.get<jsoncons::string_view>() << "\n";
+		    break;
+		case jsoncons::staj_event_type::string_value:
+		    // Or std::string_view, if supported
+		    std::cout << event.event_type() << ": " << event.get<jsoncons::string_view>() << "\n";
+		    break;
+		case jsoncons::staj_event_type::null_value:
+		    std::cout << event.event_type() << ": " << "\n";
+		    break;
+		case jsoncons::staj_event_type::bool_value:
+		    std::cout << event.event_type() << ": " << std::boolalpha << event.get<bool>() << "\n";
+		    break;
+		case jsoncons::staj_event_type::int64_value:
+		    std::cout << event.event_type() << ": " << event.get<int64_t>() << "\n";
+		    break;
+		case jsoncons::staj_event_type::uint64_value:
+		    std::cout << event.event_type() << ": " << event.get<uint64_t>() << "\n";
+		    break;
+		case jsoncons::staj_event_type::double_value:
+		    std::cout << event.event_type() << ": " << event.get<double>() << "\n";
+		    break;
+		default:
+		    std::cout << "Unhandled event type\n";
+		    break;
+		}
+		
+		cursor.next ();
+
+	    }
+
+	    // jsoncons::json_decoder<json> decoder{};
+	    // json j1 = jsoncons::decode_traits<json,char>::decode (cursor, decoder, ec);
+	    // if (ec) {  JSONCONS_THROW(jsoncons::ser_error(ec, cursor.context().line(), cursor.context().column())); }
+	    // cout << mapb->size << "\t" << hexstring (mapb->value, mapb->size) << "\n";
+	    // cout << jsoncons::pretty_print (j1) << "\n";
 	}
 
 	{

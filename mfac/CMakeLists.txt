@@ -32,7 +32,7 @@ fetchcontent_declare(
 fetchcontent_declare(
   jsoncons
   GIT_REPOSITORY	"https://github.com/danielaparker/jsoncons.git"
-  GIT_TAG		"8756e8091e3b5ee72981caaadbf17300a5683e7d")
+  GIT_TAG		"v0.170.1")
 
 set(AEROSPIKE_DIR "${CMAKE_CURRENT_BINARY_DIR}/aerospike-client-c-prefix")
 
@@ -69,3 +69,6 @@ target_link_libraries(query docopt aerospike jsoncons Threads::Threads)
 
 add_executable(getset getset.cpp)
 target_link_libraries(getset docopt aerospike jsoncons concurrentqueue Threads::Threads)
+
+# add_executable(asquery asquery.cpp)
+# target_link_libraries(asquery docopt aerospike jsoncons concurrentqueue Threads::Threads)
