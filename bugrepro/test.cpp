@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <aerospike/aerospike.h>
 #include <aerospike/aerospike_key.h>
 #include <aerospike/aerospike_query.h>
@@ -6,13 +7,13 @@
 #include <aerospike/as_hashmap.h>
 #include <aerospike/as_nil.h>
 #include <aerospike/as_query.h>
+#include <aerospike/as_exp.h>
 #include <aerospike/as_record.h>
 #include <aerospike/as_status.h>
 #include <aerospike/as_stringmap.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <concurrentqueue.h>
 #include <cstdio>
 #include <cstring>
 #include <docopt.h>
@@ -52,7 +53,8 @@ class AerospikeDB
 public:
     AerospikeDB (const string& hostport, const string& ns);
     ~AerospikeDB ();
-    bool badput (int64_t ki);
+    bool put_string (int64_t ki, const string& str);
+    bool expr_get (int64_t ki);
 private:
     string m_ns;
     aerospike m_as;
@@ -81,36 +83,57 @@ AerospikeDB::~AerospikeDB ()
     dieunless (aerospike_close (&m_as, &err) == AEROSPIKE_OK);
 }
 
-bool AerospikeDB::badput (int64_t ki)
+bool AerospikeDB::put_string (int64_t ki, const string& str)
 {
     as_key key0;
     as_key_init_int64 (&key0, m_ns.c_str (), d["--set"].asString ().c_str (), ki);
-    
+
     as_record rec0;
     as_record_inita (&rec0, 1);
 
-    char buff[1024];
-    snprintf(buff, sizeof(buff), "230530172131416221");
-    as_record_set_geojson_str(&rec0, "bin", buff );
+    as_record_set_str (&rec0, "str", str.c_str ());
 
     as_error err;
-    switch (aerospike_key_put (&m_as, &err, nullptr, &key0, &rec0)) {
-    case AEROSPIKE_OK:
-	as_record_destroy (&rec0);
-	return true;
-    default:
+    auto rv = aerospike_key_put (&m_as, &err, nullptr, &key0, &rec0);
+    if (rv != AEROSPIKE_OK)
 	fprintf(stderr, "key:%lu\terr(%d) %s at [%s:%d]\n", ki, err.code, err.message, err.file, err.line);
-    }
-    return true;
+
+    return (rv == AEROSPIKE_OK);
 }
+
+bool AerospikeDB::expr_get (int64_t ki)
+{
+    as_key key0;
+    as_key_init_int64 (&key0, m_ns.c_str (), d["--set"].asString ().c_str (), ki);
+
+    as_policy_read p;
+    as_policy_read_init (&p);
+
+    vector<uint8_t> bv = { 0x08, 0x00, 0x00, 0x00, 0x93, 0x01, 0xa2, 0x17, 0x61, 0xa2, 0x03, 0x61 };
+    p.base.filter_exp = (as_exp *) bv.data ();
+
+    as_error err;
+    as_record* recp{nullptr};
+
+    auto rv = aerospike_key_get (&m_as, &err, &p, &key0, &recp);
+    if (rv != AEROSPIKE_OK)
+	fprintf(stderr, "key:%lu\terr(%d) %s at [%s:%d]\n", ki, err.code, err.message, err.file, err.line);
+
+    if (recp)	as_record_destroy (recp);
+
+    return (rv == AEROSPIKE_OK);
+}
+
 int main (int argc, char **argv)
 {
-    // a sort of "global params"
     d = docopt::docopt (USAGE, {argv+1, argv+argc});
-    {
-	AerospikeDB db{d["--asdb"].asString (), d["--ns"].asString ()};
-	db.badput (100);
-    } // wait for AerospikeDB's dtor
+    AerospikeDB db{d["--asdb"].asString (), d["--ns"].asString ()};
 
+    db.put_string (1234, "abcd");
+    int ri{0};
+    while (ri++ < 100000) {
+	db.expr_get (1234);
+    }
+    fprintf (stderr, "Died after %d runs\n", ri);
     return 0;
 }
