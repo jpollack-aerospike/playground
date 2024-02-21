@@ -69,6 +69,3 @@ target_link_libraries(query docopt aerospike jsoncons Threads::Threads)
 
 add_executable(getset getset.cpp)
 target_link_libraries(getset docopt aerospike jsoncons concurrentqueue Threads::Threads)
-
-add_executable(invalid_geojson_test invalid_geojson_test.cpp)
-target_link_libraries(invalid_geojson_test docopt aerospike jsoncons concurrentqueue Threads::Threads)

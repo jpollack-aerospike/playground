@@ -40,6 +40,22 @@ const size_t g_ep_str_sz = char_traits<char>::length (g_ep_str);
 
 void sigint_handler (int signum) { g_running = false; }
 
+struct as_msg
+{
+	uint8_t header_sz; // size of this header - 22
+	uint8_t info1;
+	uint8_t info2;
+	uint8_t info3;
+	uint8_t info4;
+	uint8_t result_code;
+	uint32_t generation;
+	uint32_t record_ttl;
+	uint32_t transaction_ttl;
+	uint16_t n_fields;
+	uint16_t n_ops;
+	uint8_t data[0]; // first fields, then ops	
+} __attribute__((__packed__));
+
 vector<uint8_t> addr_resolve (const string& hostport)
 {
     // Resolve hostname:port string to something we can pass to connect(2).
@@ -69,19 +85,19 @@ size_t info_sync (int fd, char **obuf, const string& istr)
     size_t sz = istr.length ();
     dieunless (sz < 256);
     uint64_t hdr = 258 + ((uint64_t)sz << 56);
-
     const struct iovec iov[2] = {
-	{ .iov_base=&hdr,			.iov_len=8 },
-	{ .iov_base=(void*)istr.c_str (),	.iov_len=sz }
+		{ .iov_base=&hdr,			.iov_len=8 },
+		{ .iov_base=(void*)istr.c_str (),	.iov_len=sz }
     };
     dieunless (writev (fd, iov, 2) == 8+sz);
     dieunless (read (fd, &hdr, 8) == 8);
     sz = (hdr >> 56) + ((0x00FF & (hdr >> 48)) << 8);
     dieunless (sz < 4096);
     if (*obuf == nullptr) {
-	*obuf = (char*)malloc (sz);
+		*obuf = (char*)malloc (sz);
     }
     dieunless (read (fd, *obuf, sz) == sz);
+	*obuf[sz] = 0;
     return sz;
 }
 
@@ -111,8 +127,6 @@ int main (int argc, char **argv, char **envp)
     dieunless ((cfd = socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
     dieunless (connect (cfd, (sockaddr *)ab.data (), ab.size ()) == 0);
 
-    // char imsg[] = "
-    // auto r = info_sync (cfd, imsg);
     char *res = nullptr;
     auto sz = info_sync (cfd, &res, "node\npartition-generation\npartitions\nreplicas\nfeatures\n");
     res[sz] = 0;

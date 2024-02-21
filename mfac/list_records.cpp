@@ -57,10 +57,10 @@ static bool callback_entry (const as_val *value, void *udata)
     as_record_iterator_init (&it, rec);
     printf ("%s\t", set);
     while (as_record_iterator_has_next (&it)) {
-	as_bin *bin = as_record_iterator_next (&it);
-	char *valstr = as_val_tostring (as_bin_get_value (bin));
-	printf ("%s:%s ", as_bin_get_name (bin), valstr);
-	free (valstr);
+		as_bin *bin = as_record_iterator_next (&it);
+		char *valstr = as_val_tostring (as_bin_get_value (bin));
+		printf ("\n\t%s:%s", as_bin_get_name (bin), valstr);
+		free (valstr);
     }
     printf ("\n");
     as_record_iterator_destroy (&it);
@@ -74,8 +74,8 @@ int entry (void)
 
     as_error err;
     if (aerospike_scan_foreach(&as, &err, NULL, &s0, callback_entry, NULL) != AEROSPIKE_OK) {
-	fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line); 
-	return -1;
+		fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line); 
+		return -1;
     }
 
     as_scan_destroy (&s0);
@@ -87,17 +87,17 @@ int main (int argc, char **argv)
     string hostname;
     uint64_t portno{3000};
     {
-	auto d{docopt::docopt (USAGE, {argv+1, argv+argc})};
-	hostname = d["--asdb"].asString ();
-	size_t cpos = hostname.find(':');
-	if (cpos != string::npos) {
-	    portno = stoi (hostname.substr (cpos+1));
-	    hostname = hostname.substr (0, cpos);
+		auto d{docopt::docopt (USAGE, {argv+1, argv+argc})};
+		hostname = d["--asdb"].asString ();
+		size_t cpos = hostname.find(':');
+		if (cpos != string::npos) {
+			portno = stoi (hostname.substr (cpos+1));
+			hostname = hostname.substr (0, cpos);
+		}
+		ns = d["--ns"].asString (); 
+		sn = d["--sn"].asString ();
+		cerr << sn << "\n";
 	}
-	ns = d["--ns"].asString (); 
-	sn = d["--sn"].asString ();
-	cerr << sn << "\n";
-   }
 
     as_log_set_callback(log_callback);
 
