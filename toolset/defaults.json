@@ -1,0 +1,25 @@
+{
+    "hash":	
+    {
+	"keys":	["a", "b", "c"]
+    },
+    "fhash":	
+    {
+	"key":	"color",
+	"len":	8
+    },
+    "int":	
+    {
+	"max":	1000,
+	"min":	0
+    },
+    "list":	
+    {
+	"len":	{"max":15,"min":5}
+    },
+    "str":	
+    {
+	"chr":	{"max":122,"min":97},
+	"len":	{"max":8,"min":4}
+    }
+}
