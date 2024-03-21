@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
-project(bugrepro LANGUAGES CXX)
+project(toolset LANGUAGES CXX)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_CXX_STANDARD 17)	
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -67,3 +68,9 @@ target_link_libraries(load docopt aerospike concurrentqueue nlohmann_json::nlohm
 
 add_executable(dump dump.cpp)
 target_link_libraries(dump docopt aerospike concurrentqueue nlohmann_json::nlohmann_json Threads::Threads)
+
+add_executable(set set.cpp)
+target_link_libraries(set docopt aerospike concurrentqueue nlohmann_json::nlohmann_json Threads::Threads)
+
+add_executable(sindex sindex.cpp)
+target_link_libraries(sindex aerospike Threads::Threads)

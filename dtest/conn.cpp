@@ -86,7 +86,7 @@ size_t info_sync (int fd, char **obuf, const string& istr)
     dieunless (sz < 256);
     uint64_t hdr = 258 + ((uint64_t)sz << 56);
     const struct iovec iov[2] = {
-		{ .iov_base=&hdr,			.iov_len=8 },
+		{ .iov_base=&hdr,					.iov_len=8 },
 		{ .iov_base=(void*)istr.c_str (),	.iov_len=sz }
     };
     dieunless (writev (fd, iov, 2) == 8+sz);
@@ -94,10 +94,10 @@ size_t info_sync (int fd, char **obuf, const string& istr)
     sz = (hdr >> 56) + ((0x00FF & (hdr >> 48)) << 8);
     dieunless (sz < 4096);
     if (*obuf == nullptr) {
-		*obuf = (char*)malloc (sz);
+		*obuf = (char*)malloc (sz + 1);
+		*(*obuf + sz) = 0;
     }
     dieunless (read (fd, *obuf, sz) == sz);
-	*obuf[sz] = 0;
     return sz;
 }
 
@@ -127,13 +127,12 @@ int main (int argc, char **argv, char **envp)
     dieunless ((cfd = socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
     dieunless (connect (cfd, (sockaddr *)ab.data (), ab.size ()) == 0);
 
-    char *res = nullptr;
-    auto sz = info_sync (cfd, &res, "node\npartition-generation\npartitions\nreplicas\nfeatures\n");
-    res[sz] = 0;
+    char *res = (char *)malloc (4096);
+    auto sz = info_sync (cfd, (char **)&res, "node\npartition-generation\npartitions\nreplicas\nfeatures\n");
     cout << "got: " << sz << " bytes\n";
-    cout << res << "\n";
-    // cout << info_sync (cfd, "service\n");
-
+	res[sz] = 0;
+	printf ("%s<<\n", res);
+	free (res);
     close (cfd);
     return 0;
 }

@@ -50,13 +50,47 @@ static bool callback_entry (const as_val *value, void *udata)
     return true;
 }
 
+static bool callback2_entry (const as_val *value, void *udata)
+{
+    if (!value) return false;
+    as_record *rec = as_record_fromval (value);
+    dieunless (rec);
+	dieunless (rec->key.ns[0]);
+
+	size_t nbins = rec->bins.size;
+	rec->key.digest.value;
+	rec->ttl;
+	rec->key.valuep; // optional
+	for (auto ii=0; ii < rec->bins.size; ++ii) {
+		as_bin *bin = rec->bins.entries + ii;
+		bin->name;
+		(as_val *)bin->valuep;
+	}
+	
+    const char *set = (rec->key.set[0] == 0) ? nullptr : rec->key.set;
+    
+    as_record_iterator it;
+    as_record_iterator_init (&it, rec);
+    printf ("%s\t", set);
+    while (as_record_iterator_has_next (&it)) {
+		as_bin *bin = as_record_iterator_next (&it);
+		char *valstr = as_val_tostring (as_bin_get_value (bin));
+		printf ("\n\t%s:%s", as_bin_get_name (bin), valstr);
+		free (valstr);
+    }
+    printf ("\n");
+    as_record_iterator_destroy (&it);
+    return true;
+}
+
 int entry (void)
 {
     as_scan s0;
     as_scan_init(&s0, ns.c_str (), (sn.size () > 0) ? sn.c_str () : nullptr);
-
+	s0.deserialize_list_map = false;
+	
     as_error err;
-    if (aerospike_scan_foreach(&as, &err, NULL, &s0, callback_entry, NULL) != AEROSPIKE_OK) {
+    if (aerospike_scan_foreach(&as, &err, NULL, &s0, callback2_entry, NULL) != AEROSPIKE_OK) {
 		fprintf(stderr, "err(%d) %s at [%s:%d]\n", err.code, err.message, err.file, err.line); 
 		return -1;
     }
