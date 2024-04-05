@@ -74,3 +74,6 @@ target_link_libraries(set docopt aerospike concurrentqueue nlohmann_json::nlohma
 
 add_executable(sindex sindex.cpp)
 target_link_libraries(sindex aerospike Threads::Threads)
+
+add_executable(delay_put delay_put.cpp)
+target_link_libraries(delay_put aerospike Threads::Threads)
