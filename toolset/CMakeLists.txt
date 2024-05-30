@@ -77,3 +77,6 @@ target_link_libraries(sindex aerospike Threads::Threads)
 
 add_executable(delay_put delay_put.cpp)
 target_link_libraries(delay_put aerospike Threads::Threads)
+
+add_executable(mmap_block_device mmap_block_device.cpp)
+target_link_libraries(mmap_block_device docopt Threads::Threads)
