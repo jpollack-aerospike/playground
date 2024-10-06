@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(bugrepro LANGUAGES CXX)
+project(dtest LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17)	
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -13,7 +13,10 @@ include(FetchContent)
 # set(HDR_HISTOGRAM_BUILD_PROGRAMS OFF)
 # set(JSONCONS_BUILD_TESTS OFF)
 # set(jsoncons_BUILD_TESTS OFF)
-# set(BUILD_TESTING OFF)
+
+set(BUILD_TESTING OFF)
+set(ROCKSDB_BUILD_TESTS OFF)
+set(rocksdb_BUILD_TESTS OFF)
 
 # fetchcontent_declare(
 #   docopt
@@ -25,10 +28,25 @@ include(FetchContent)
 #   GIT_REPOSITORY	"https://github.com/HdrHistogram/HdrHistogram_c"
 #   GIT_TAG			"0.11.8")
 # 
+fetchcontent_declare(
+  nlohmann_json
+  SOURCE_DIR  "/home/joshua/json"
+  GIT_TAG	"jpdev")
+
+fetchcontent_declare(
+  rocksdb
+  GIT_REPOSITORY	"https://github.com/facebook/rocksdb"
+  GIT_TAG		"v9.5.2")
+
+fetchcontent_declare(
+  cpp-httplib
+  GIT_REPOSITORY	"https://github.com/yhirose/cpp-httplib"
+  GIT_TAG		"v0.16.3")
+
 # fetchcontent_declare(
-#   nlohmann_json
-#   GIT_REPOSITORY        "https://github.com/nlohmann/json.git"
-#   GIT_TAG               "v3.11.2")
+#  nlohmann_json
+#  GIT_REPOSITORY        "https://github.com/nlohmann/json.git"
+#  GIT_TAG               "v3.11.3")
 
 # fetchcontent_declare(
 #   concurrentqueue
@@ -56,7 +74,9 @@ include(FetchContent)
 # target_link_libraries(aerospike INTERFACE "${AEROSPIKE_DIR}/lib/libaerospike.a" dl OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 # add_dependencies(aerospike aerospike-client-c)
 # 
-# fetchcontent_makeavailable(nlohmann_json)
+fetchcontent_makeavailable(nlohmann_json)
+fetchcontent_makeavailable(rocksdb)
+fetchcontent_makeavailable(cpp-httplib)
 # fetchcontent_makeavailable(jsoncons)
 # fetchcontent_makeavailable(docopt)
 # fetchcontent_makeavailable(hdrhistogram)
@@ -77,5 +97,44 @@ include(FetchContent)
 # add_executable(getset getset.cpp)
 # target_link_libraries(getset docopt aerospike jsoncons concurrentqueue Threads::Threads)
 
-add_executable(conn conn.cpp)
-target_link_libraries(conn Threads::Threads)
+# add_executable(conn cf_ripemd160.c conn.cpp as_proto.cpp)
+# target_link_libraries(conn Threads::Threads)
+# 
+# add_executable(data_init cf_ripemd160.c data_init.cpp as_proto.cpp util.cpp simple_bank.cpp)
+# target_link_libraries(data_init Threads::Threads)
+# 				  
+add_executable(sserver cf_ripemd160.c sserver.cpp as_proto.cpp as_listener.cpp util.cpp)
+target_link_libraries(sserver Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(info cf_ripemd160.c info.cpp util.cpp as_proto.cpp)
+target_link_libraries(info Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(mrttest cf_ripemd160.c mrttest.cpp as_proto.cpp util.cpp simple_string.cpp)
+target_link_libraries(mrttest Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(tstr cf_ripemd160.c tstr.cpp as_proto.cpp util.cpp simple_string.cpp transactional_string.cpp)
+target_link_libraries(tstr Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(reroster cf_ripemd160.c reroster.cpp as_proto.cpp util.cpp simple_string.cpp)
+target_link_libraries(reroster Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(string_init cf_ripemd160.c string_init.cpp as_proto.cpp util.cpp simple_string.cpp)
+target_link_libraries(string_init Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(string_insert cf_ripemd160.c string_insert.cpp as_proto.cpp util.cpp simple_string.cpp)
+target_link_libraries(string_insert Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(workload cf_ripemd160.c workload.cpp as_proto.cpp util.cpp simple_string.cpp transaction.cpp)
+target_link_libraries(workload Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(hello_rocks hello_rocks.cpp)
+target_link_libraries(hello_rocks rocksdb dl)			   
+
+add_executable(dump dump.cpp cf_ripemd160.c as_proto.cpp util.cpp)
+target_link_libraries(dump Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(hstest hstest.cpp)
+target_link_libraries(hstest httplib::httplib)
+
+add_executable(dore dore.cpp cf_ripemd160.c as_proto.cpp util.cpp)
+target_link_libraries(dore Threads::Threads nlohmann_json::nlohmann_json rocksdb dl)

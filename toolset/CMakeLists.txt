@@ -72,6 +72,9 @@ target_link_libraries(dump docopt aerospike concurrentqueue nlohmann_json::nlohm
 add_executable(set set.cpp)
 target_link_libraries(set docopt aerospike concurrentqueue nlohmann_json::nlohmann_json Threads::Threads)
 
+add_executable(insert insert.cpp)
+target_link_libraries(insert docopt aerospike concurrentqueue nlohmann_json::nlohmann_json Threads::Threads)
+
 add_executable(sindex sindex.cpp)
 target_link_libraries(sindex aerospike Threads::Threads)
 
@@ -80,3 +83,6 @@ target_link_libraries(delay_put aerospike Threads::Threads)
 
 add_executable(mmap_block_device mmap_block_device.cpp)
 target_link_libraries(mmap_block_device docopt Threads::Threads)
+
+# add_executable(simple_set simple_set.cpp)
+# target_link_libraries(simple_set aerospike Threads::Threads)

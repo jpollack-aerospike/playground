@@ -59,8 +59,8 @@ int main (int argc, char **argv, char **envp)
 	unordered_map<string,string> p = {
 		{ "ASDB",					"127.0.0.1:3000" },
 		{ "NS",						"ns0" },
-		{ "SET",					"s0" },
-		{ "BIN",					"a" }
+		{ "SET",					"str" },
+		{ "BIN",					"bal" }
 	};
 
 	for (auto ep = *envp; ep; ep = *(++envp))
@@ -92,20 +92,20 @@ int main (int argc, char **argv, char **envp)
 	string str_name = "idx_str_" + p["NS"] + "_" + p["SET"] + "_" + p["BIN"];
 	if (!strcmp ("create", argv[1])) {
 		as_index_task task;
-		// dieunless (aerospike_index_create (&as, &err, &task, NULL,
-		// 								   p["NS"].c_str (),
-		// 								   p["SET"].c_str (),
-		// 								   p["BIN"].c_str (),
-		// 								   int_name.c_str (),
-		// 								   AS_INDEX_NUMERIC) == AEROSPIKE_OK);
-		// aerospike_index_create_wait (&err, &task, 0);
 		dieunless (aerospike_index_create (&as, &err, &task, NULL,
 										   p["NS"].c_str (),
 										   p["SET"].c_str (),
 										   p["BIN"].c_str (),
-										   str_name.c_str (),
-										   AS_INDEX_STRING) == AEROSPIKE_OK);
+										   int_name.c_str (),
+										   AS_INDEX_NUMERIC) == AEROSPIKE_OK);
 		aerospike_index_create_wait (&err, &task, 0);
+		// dieunless (aerospike_index_create (&as, &err, &task, NULL,
+		// 								   p["NS"].c_str (),
+		// 								   p["SET"].c_str (),
+		// 								   p["BIN"].c_str (),
+		// 								   str_name.c_str (),
+		// 								   AS_INDEX_STRING) == AEROSPIKE_OK);
+		// aerospike_index_create_wait (&err, &task, 0);
 	} else if (!strcmp ("remove", argv[1])) {
 		dieunless (aerospike_index_remove (&as, &err, NULL, p["NS"].c_str (), int_name.c_str ()) == AEROSPIKE_OK);
 		dieunless (aerospike_index_remove (&as, &err, NULL, p["NS"].c_str (), str_name.c_str ()) == AEROSPIKE_OK);

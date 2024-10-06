@@ -129,6 +129,7 @@ int main (int argc, char **argv, char **envp)
 
 	ns = p["NS"];
 	sn = p["SET"];
+	sn = "";
 
     as_config config;
     as_config_init (&config);
