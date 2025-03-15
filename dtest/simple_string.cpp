@@ -175,7 +175,7 @@ int str_debug (int fd, int64_t id, std::string& str)
     std::array<uint8_t,20> keyd;
     add_integer_key_digest (keyd.data (), "str", id);
     
-    char buf[] = "debug-record:namespace=ns0;keyd=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n";
+    char buf[] = "debug-record:namespace=ns0;keyd=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX;mode=raw\n";
     to_hex (buf+32, keyd.data (), 20);
 
     size_t sz = call_info (fd, str, buf);
@@ -303,7 +303,7 @@ int txn_add_str (int fd, uint64_t mrtid, int64_t id, uint32_t *deadline = nullpt
     dieunless (msg0->add (as_field::type::t_set, MONITOR_SET_NAME));
     add_integer_key_digest (msg0->add (as_field::type::t_digest_ripe, CF_SHA_DIGEST_LENGTH)->data, MONITOR_SET_NAME, mrtid);
 
-    if (deadline) {
+    if (deadline && (!*deadline)) {
 	uint64_t tmp0 = htobe64 (mrtid);
 	dieunless (msg0->add (as_op::type::t_write, "id", sizeof(int64_t), &tmp0, as_particle::type::t_integer));
     }
@@ -316,7 +316,7 @@ int txn_add_str (int fd, uint64_t mrtid, int64_t id, uint32_t *deadline = nullpt
     op->data_sz (pl.size ());
     
     size_t bn = call (fd, (void **)&msg1, msg0);
-    if (deadline) {
+    if (deadline && (!*deadline)) {
 	auto df = msg1->field (as_field::type::t_mrt_deadline);
 	if (!msg1->result_code)	    
 	    dieunless (df);

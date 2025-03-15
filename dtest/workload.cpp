@@ -65,7 +65,11 @@ void init_entry (void)
 	int64_t bal = 10;
 	json jo = { { "id", id }, { "bal", bal } };
 	// dieunless (ts.set (fd, id, jo.dump ()) == 0);
-	dieunless (ts.set (fd, id, bal) == 0);
+	auto rc = ts.set (fd, id, bal);
+	if (rc) {
+	    fprintf (stderr, "ERROR ts.set rc = %d\n", rc);
+	    dieunless (false);
+	}
 
 
 	if (++ntx == txnmax) {
@@ -96,6 +100,62 @@ void debug_entry (void)
 	printf ("%d:\t%s\n", id, str.c_str ());
     }
 
+    close (fd);
+}
+
+void debug2_entry (void)
+{
+    int fd;
+    auto ab = addr_resolve (p["ASDB"]);
+    dieunless ((fd = socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
+    dieunless (connect (fd, (sockaddr *)ab.data (), ab.size ()) == 0);
+
+    int64_t id_lb = stoi (p["KEYLB"]);
+    int64_t id_ub = stoi (p["KEYUB"]);
+
+    int64_t id = id_lb;
+
+    // dieunless (str_truncate (fd));
+    // printf ("TRUNCATE\n");
+
+    string str;
+    str_debug (fd, id, str);
+    printf ("%d:\t%s\n", id, str.c_str ());
+    str.clear ();
+    transaction ts;
+    dieunless (ts.set (fd, id, 99) == 0);
+    printf ("WRITE\n");
+
+    str_debug (fd, id, str);
+    printf ("%d:\t%s\n", id, str.c_str ());
+    str.clear ();
+    
+    dieunless (ts.commit (fd));
+    ts.finish (fd);
+    printf ("COMMITTED\n");
+
+    str_debug (fd, id, str);
+    printf ("%d:\t%s\n", id, str.c_str ());
+    str.clear ();
+
+    close (fd);
+}
+
+void debug3_entry (void)
+{
+    int fd;
+    auto ab = addr_resolve (p["ASDB"]);
+    dieunless ((fd = socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
+    dieunless (connect (fd, (sockaddr *)ab.data (), ab.size ()) == 0);
+
+    int64_t id_lb = stoi (p["KEYLB"]);
+    int64_t id_ub = stoi (p["KEYUB"]);
+
+    int64_t id = id_lb;
+
+    auto rc = str_roll (fd, 98, 42, true);
+    printf ("sent roll forward w/ mrt=99 to a blank digest.  got %d\n", rc);
+    
     close (fd);
 }
 
@@ -344,8 +404,6 @@ void stats_worker_entry (int rate)
     uint64_t tlast = 0;
     uint64_t tnow = usec_now ();
 
-    cout << "sinter\n";
-
     while (g_running) {
 	while (g_running && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
 	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
@@ -357,8 +415,6 @@ void stats_worker_entry (int rate)
 	json jo = { { "now", tnow }, { "ntx", ntx } };
 	printf ("%s\n", jo.dump ().c_str ());
     }
-
-    cout << "sexit";
 
 }
 
@@ -423,6 +479,8 @@ int main (int argc, char **argv, char **envp)
     } else if (!cmd.compare ("update")) {		update_entry ();
     } else if (!cmd.compare ("debug")) {		debug_entry ();
     } else if (!cmd.compare ("display")) {		display_entry ();
+    } else if (!cmd.compare ("debug2")) {		debug2_entry ();
+    } else if (!cmd.compare ("debug3")) {		debug3_entry ();
     } else {
 	fprintf (stderr, "usage:\n %s init|update\n", argv[0]);
     }

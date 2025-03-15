@@ -54,7 +54,7 @@ void scan_start (int fd, int nrec)
 
     msg->clear ();
     msg->flags = AS_MSG_FLAG_READ | AS_MSG_FLAG_PARTITION_DONE;
-    dieunless (msg->add (as_field::type::t_namespace, "ns0"));
+    dieunless (msg->add (as_field::type::t_namespace, p["NS"]));
     dieunless (msg->add (as_field::type::t_pid_array, parr.size () * 2, parr.data ()));
     if (nrec) {
 	uint64_t tmp = htobe64 (nrec);

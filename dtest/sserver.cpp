@@ -56,11 +56,11 @@ int main (int argc, char **argv, char **envp)
     
     as_listener al;
     al.onMsg = [](as_msg **dst, const as_msg* src) -> size_t {
-	// printf ("%s\n", to_json (src).dump ().c_str ());
+	printf ("%s\n", to_json (src).dump ().c_str ());
 	return 0;
     };
     
-    al.start ("0.0.0.0:3000");
+    al.start ("0.0.0.0:4000");
 
     while (g_running) usleep (1000);
 

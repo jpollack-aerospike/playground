@@ -59,7 +59,7 @@ int main (int argc, char **argv, char **envp)
     while (getline (cin, line) && !line.empty ()) {
 	string resp;
 	auto sz = call_info (cfd, resp, line + "\n");
-	printf ("%d:%s\n", sz, resp.c_str ());
+	printf ("%s\n", resp.c_str ());
     }
 
     // set-config:context=xdr;dc=dc0;node-adress-port=127.0.0.1:3333;

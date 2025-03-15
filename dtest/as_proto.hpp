@@ -31,6 +31,7 @@
 #define AS_MSG_FLAG_MRT_ROLL_FORWARD		(1 << 25)
 #define AS_MSG_FLAG_MRT_ROLL_BACK		(1 << 26)
 #define AS_MSG_FLAG_MRT_MONITOR_DRIVEN		(1 << 27)
+#define AS_MSG_FLAG_MRT_UNLOCKED_ONLY		(1 << 28)
 #define MONITOR_SET_NAME "<ERO~MRT"
 
 struct as_header;
@@ -81,7 +82,7 @@ struct as_field
 	t_key =			2,
 	t_record_version =	3,	// 7 bytes
 	t_digest_ripe =		4,	// 20 bytes
-	t_mrtid =		5,	// 8 bytes
+	t_mrtid =		5,	// 8 bytes little endian
 	t_mrt_deadline =	6,	// 4 bytes little endian
 	t_trid =		7,
 	t_socket_timeout =	9,
