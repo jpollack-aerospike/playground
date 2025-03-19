@@ -177,15 +177,11 @@ size_t write (int fd, const as_msg* msg);
 size_t read (int fd, void **obuf);
 size_t read (int fd, std::string& str);
 
-size_t call (int fd, as_msg **obuf, const as_msg* msg);
-size_t call (int fd, void **obuf, const as_msg* msg);
-size_t call (int fd, void **obuf, const std::string& str);
-
-size_t timed_call (int fd, as_msg **obuf, const as_msg* msg, uint64_t& dur);
-
-size_t call_info (int fd, std::string& obuf, const std::string& ibuf);
-std::string call_info (int fd, const std::string& str);
+size_t call (int fd, void **obuf, const as_msg* msg, uint32_t *dur = nullptr);
+size_t call (int fd, as_msg **obuf, const as_msg* msg, uint32_t *dur = nullptr);
+size_t call (int fd, void **obuf, const std::string& str, uint32_t *dur = nullptr);
+size_t call_info (int fd, std::string& obuf, const std::string& ibuf, uint32_t *dur = nullptr);
+std::string call_info (int fd, const std::string& str, uint32_t *dur = nullptr);
 
 std::string to_string (const as_field::type t);
 std::string to_string (const as_op::type t);
-

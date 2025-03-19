@@ -67,9 +67,9 @@ as_msg *visit (as_msg *msg, int ri, int flags)
     msg->clear ();
     msg->flags = flags;
     msg->be_transaction_ttl = htobe32 (1000);
-    dieunless (msg->add (as_field::type::t_namespace, "ns0"));
-    dieunless (msg->add (as_field::type::t_set, "demo"));
-    add_integer_key_digest (msg->add (as_field::type::t_digest_ripe, CF_SHA_DIGEST_LENGTH)->data, "demo", ri);
+    dieunless (msg->add (as_field::type::t_namespace, p["NS"]));
+    dieunless (msg->add (as_field::type::t_set, p["SN"]));
+    add_integer_key_digest (msg->add (as_field::type::t_digest_ripe, CF_SHA_DIGEST_LENGTH)->data, p["SN"], ri);
     return msg;
 }
 as_msg *set_bin (as_msg *msg, uint16_t bidx, int64_t val)
@@ -151,7 +151,7 @@ void update_worker_entry (int rate)
     as_msg *res = (as_msg *)(buf + 64);
     as_msg *req = (as_msg *)(buf + 1024);
     uint64_t duration;
-    
+
     while (g_running.load ()) {
 	tlast = tnow;
 	record_set (req, distr (gen), distb (gen), distv (gen));
@@ -163,13 +163,13 @@ void update_worker_entry (int rate)
 	    break;
 	}
 
-	dieunless ((1024-64) > timed_call (fd, &res, req, duration));
-	dieunless (res->result_code == 0);
 	auto idx = g_idx.fetch_add (2);
-	g_buf [((idx & 1) * (g_buf.size () / 2)) + (idx / 2)] = duration;
+	auto ii = (idx / 2) + ((idx & 1) * (g_buf.size () / 2));
+	dieunless ((1024-64) > call (fd, &res, req, g_buf.data () + ii));
+	dieunless (res->result_code == 0);
     }
-    
-    close (fd);		
+
+    close (fd);
 
 }
 
@@ -188,7 +188,6 @@ void stats_worker_entry (int rate)
 	tlast = tnow;
 	jo["now"] = tnow;
 	jo["data"] = json::array ();
-
 	auto nidx = !g_idx & 1; // ping pong
 	auto lidx = g_idx.exchange (nidx);
 	auto idxb = (lidx & 1) * (g_buf.size () / 2);
@@ -197,7 +196,7 @@ void stats_worker_entry (int rate)
 	    jo["data"][ii] = g_buf[idxb + ii];
 	    g_buf[idxb + ii] = 0;
 	}
-	
+
 	printf ("%s\n", jo.dump ().c_str ());
     }
 
@@ -210,12 +209,12 @@ void update_entry (void)
 
     g_idx = 0;
     g_buf.resize (1024*1024);
-    
+
     for (int ii=0; ii < nth; ii++)
 	vth.emplace_back (update_worker_entry, stoi (p["RATE"]));
-    
+
     vth.emplace_back (stats_worker_entry, 1);
-    
+
     while (g_running) {
 	usleep (1000);
     }
@@ -236,24 +235,38 @@ void init_entry (void)
     char *buf = (char *)malloc (2 * 1024 * 1024);
     as_msg *res = (as_msg *)(buf + 64);
     as_msg *req = (as_msg *)(buf + 1024);
+    uint32_t dur = 0;
+    json jo = { { "type", "insert" }, { "id", 0 }, { "bins", nbins } };
+
+    if (stoi (p["TRUNCATE"])) {
+	auto sret = call_info (fd, "truncate:namespace=" + p["NS"] + ";set=" + p["SN"] + ";\n", &dur);
+	// sret == 'truncate:namespace=ns0;set=demo;\tok'
+	json jt0 = { { "type", "truncate" }, { "dur", dur } };
+	printf ("%s\n", jt0.dump ().c_str ());
+    }
 
     record_init (req, 0, nbins, 1);
-    dieunless ((1024-64) > call (fd, &res, req));
+    dieunless ((1024-64) > call (fd, &res, req, &dur));
     dieunless (res->result_code == 0);
     record_size (req, 0);
     dieunless ((1024-64) > call (fd, &res, req));
     dieunless (res->result_code == 0);
-    auto psize = (recsize - bin_value (res)) + 1;
+    auto rsize = bin_value (res);
+    auto psize = (recsize - rsize) + 1;
+    // without padding, record is rsize
+    jo["bytes"] = rsize;
+    jo["dur"] = dur;
+    printf ("%s\n", jo.dump ().c_str ());
+    jo["bytes"] = recsize;
+
     if (psize <= 1) psize = 0;
     for (auto id = id_lb; id <= id_ub; id++) {
-	json jo = { { "type", "insert" }, { "id", id }, { "bins", nbins }, 
-		    { "bytes", recsize } };
 	record_init (req, id, nbins, psize);
-	jo["now"] = usec_now ();
-	uint64_t duration;
-	dieunless ((1024-64) > timed_call (fd, &res, req, duration));
+	jo["id"] = id;
+	jo["bins"] = nbins;
+	dieunless ((1024-64) > call (fd, &res, req, &dur));
 	dieunless (res->result_code == 0);
-	jo["us"] = duration;
+	jo["dur"] = dur;
 	printf ("%s\n", jo.dump ().c_str ());
     }
     free (buf);
@@ -272,11 +285,12 @@ int main (int argc, char **argv, char **envp)
 	{ "KEYUB",		"10" },
 	{ "ASDB",		"localhost:3000" },
 	{ "NS",			"ns0" },
+	{ "SN",			"demo" },
 	{ "NBINS",		"20000" },
 	{ "RECSIZE",		"500000" },
-	{ "HISTRES",		"100" },
 	{ "RATE",		"200" },
 	{ "THREADS",		"1" },
+	{ "TRUNCATE",		"1" },
     };
     // Override from environment
     for (auto ep = *envp; ep; ep = *(++envp))
@@ -291,15 +305,13 @@ int main (int argc, char **argv, char **envp)
 
     // Make a client fd and connect
     string cmd (argv[1]);
-    
+
     if (!cmd.compare ("init")) {			init_entry ();
     } else if (!cmd.compare ("update")) {		update_entry ();
-    } else if (!cmd.compare ("debug")) {		debug_entry ();
-    } else if (!cmd.compare ("display")) {		display_entry ();
     } else {
 	fprintf (stderr, "usage:\n %s init|update\n", argv[0]);
     }
-    
+
 
     return 0;
 }

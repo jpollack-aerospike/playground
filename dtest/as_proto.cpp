@@ -202,43 +202,56 @@ size_t read (int fd, std::string& str)
     return str.size ();
 }
 
-size_t call (int fd, as_msg **obuf, const as_msg* msg)
+size_t call (int fd, void **obuf, const as_msg* msg, uint32_t *dur)
 {
     write (fd, msg);
-    return read (fd, (void **)obuf);
+    if (dur) {
+	uint64_t t0{_usec_now ()};
+	size_t sz{read (fd, obuf)};
+	uint64_t t1{_usec_now ()};
+	*dur = t1 - t0;
+	return sz;
+    } else
+	return read (fd, obuf);
 }
 
-size_t call (int fd, void **obuf, const as_msg* msg)
+size_t call (int fd, as_msg **obuf, const as_msg* msg, uint32_t *dur)
 {
-    write (fd, msg);
-    return read (fd, obuf);
+    return call (fd, (void **) obuf, msg, dur);
 }
 
-size_t call (int fd, void **obuf, const std::string& str)
+size_t call (int fd, void **obuf, const std::string& str, uint32_t *dur)
 {
     write (fd, str);
-    return read (fd, obuf);
+    if (dur) {
+	uint64_t t0{_usec_now ()};
+	size_t sz{read (fd, obuf)};
+	uint64_t t1{_usec_now ()};
+	*dur = t1 - t0;
+	return sz;
+    } else
+	return read (fd, obuf);
 }
 
-size_t timed_call (int fd, as_msg **obuf, const as_msg* msg, uint64_t& dur)
-{
-    write (fd, msg);
-    uint64_t t0{_usec_now ()};
-    size_t sz{read (fd, (void **)obuf)};
-    dur = _usec_now () - t0;
-    return sz;
-}
-
-size_t call_info (int fd, std::string& obuf, const std::string& ibuf)
+size_t call_info (int fd, std::string& obuf, const std::string& ibuf, uint32_t *dur)
 {
     write (fd, ibuf);
-    return read (fd, obuf);
+    if (dur) {
+	uint64_t t0{_usec_now ()};
+	size_t sz{read (fd, obuf)};
+	uint64_t t1{_usec_now ()};
+	*dur = t1 - t0;
+	return sz;
+    } else
+	return read (fd, obuf);
 }
 
-std::string call_info (int fd, const std::string& str)
+std::string call_info (int fd, const std::string& str, uint32_t *dur)
 {
     std::string ret;
-    call_info (fd, ret, str);
+    call_info (fd, ret, str, dur);
+    // remove the trailing newline
+    ret.resize (ret.size () - 1);
     return ret;
 }
 
