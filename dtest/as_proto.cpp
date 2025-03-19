@@ -2,10 +2,16 @@
 #include <cstring>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <time.h>
+#include <chrono>
 
-void as_header::size (size_t sz) {    
+static uint64_t _usec_now (void) {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+void as_header::size (size_t sz) {
     this->be_sz_extra = 0;
-    this->be_sz = htobe32 (sz);   
+    this->be_sz = htobe32 (sz);
 }
 
 size_t as_header::size (void) const		{	return be32toh (this->be_sz); }
@@ -15,7 +21,7 @@ as_header::as_header (uint8_t _type, size_t _size) :
     type (_type) { this->size (_size); }
 
 as_header::as_header (const as_msg* msg)	{	this->init (msg); }
-as_header::as_header (const std::string& str)	{	this->init (str); }    
+as_header::as_header (const std::string& str)	{	this->init (str); }
 as_header* as_header::init (const as_msg *msg)
 {
     this->version = 2;
@@ -56,7 +62,7 @@ as_field *as_msg::field (as_field::type t) const
     for (auto ii = this->n_fields (); ii--; f = f->next ())
 	if (f->t == t)
 	    return f;
-    
+
     return nullptr;
 }
 
@@ -74,7 +80,7 @@ uint8_t* as_msg::end (void) const
     return (uint8_t *)op;
 }
 
-as_field *as_msg::add (as_field::type t, size_t sz) 
+as_field *as_msg::add (as_field::type t, size_t sz)
 {
     if (this->be_ops)    return nullptr;
 
@@ -82,7 +88,7 @@ as_field *as_msg::add (as_field::type t, size_t sz)
     for (auto ii = this->n_fields (); ii--; f = f->next ())
 	if (f->t == t)
 	    return nullptr;
-    
+
     f->be_sz = htobe32 (sz + 1);
     f->t = t;
     this->be_fields = htobe16 (1 + this->n_fields ());
@@ -90,7 +96,7 @@ as_field *as_msg::add (as_field::type t, size_t sz)
 }
 
 as_field* as_msg::add (as_field::type type, size_t sz, const void *data) {
-    return this->be_ops 
+    return this->be_ops
 	? nullptr
 	: (as_field *) memcpy (this->add (type, sz)->data, data, sz);
 }
@@ -112,17 +118,17 @@ as_op *as_msg::add (as_op::type type, size_t name_sz, size_t data_sz) {
     return op;
 }
 
-as_op* as_msg::add (as_op::type type, const std::string& name, size_t data_sz)
+as_op *as_msg::add (as_op::type type, const std::string& name, size_t data_sz, as_particle::type dt)
 {
-    as_op* op = this->add (type, name.size (), data_sz);
+    as_op *op = this->add (type, name.size (), data_sz);
     memcpy (op->name, name.c_str (), name.size ());
+    op->data_type = dt;
     return op;
 }
 
 as_op *as_msg::add (as_op::type type, const std::string& name, size_t data_sz, const void *data, as_particle::type dt)
 {
-    as_op *op = this->add (type, name, data_sz);
-    op->data_type = dt;
+    as_op *op = this->add (type, name, data_sz, dt);
     memcpy (op->data (), data, data_sz);
     return op;
 }
@@ -149,7 +155,7 @@ size_t write (int fd, const std::string& str)
 
 size_t write (int fd, const as_msg* msg)
 {
-    as_header hdr (msg); 
+    as_header hdr (msg);
     return write (fd, hdr, msg);
 }
 
@@ -157,7 +163,7 @@ size_t read (int fd, void **obuf)
 {
     uint64_t hb;
     as_header* hdr = (as_header *)&hb;
-    
+
     if (read (fd, hdr, 8) != 8) {
 	return 0;
     }
@@ -180,7 +186,7 @@ size_t read (int fd, std::string& str)
 {
     uint64_t hb;
     as_header* hdr = (as_header *)&hb;
-    
+
     if (read (fd, hdr, 8) != 8) {
 	return 0;
     }
@@ -212,6 +218,15 @@ size_t call (int fd, void **obuf, const std::string& str)
 {
     write (fd, str);
     return read (fd, obuf);
+}
+
+size_t timed_call (int fd, as_msg **obuf, const as_msg* msg, uint64_t& dur)
+{
+    write (fd, msg);
+    uint64_t t0{_usec_now ()};
+    size_t sz{read (fd, (void **)obuf)};
+    dur = _usec_now () - t0;
+    return sz;
 }
 
 size_t call_info (int fd, std::string& obuf, const std::string& ibuf)
@@ -259,6 +274,7 @@ std::string to_string (const as_field::type t)
     case(as_field::type::t_batch_with_set):		return "batch_with_set";
     case(as_field::type::t_predexp):			return "predexp";
     }
+    return "unknown";
 }
 
 std::string to_string (const as_op::type t)
@@ -282,5 +298,5 @@ std::string to_string (const as_op::type t)
     case(as_op::type::t_hll_read):			return "hll_read";
     case(as_op::type::t_hll_modify):			return "hll_modify";
     }
+    return "unknown";
 }
-

@@ -39,7 +39,6 @@ unordered_map<string,string> p;
 
 const char g_ep_str[] = "JP_WORKLOAD_";
 const size_t g_ep_str_sz = char_traits<char>::length (g_ep_str);
-uint64_t usec_now (void) { return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count(); }
 
 atomic<bool> g_running;
 void sigint_handler (int signum) { g_running = false; }

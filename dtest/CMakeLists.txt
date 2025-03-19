@@ -124,8 +124,11 @@ target_link_libraries(string_init Threads::Threads nlohmann_json::nlohmann_json)
 add_executable(string_insert cf_ripemd160.c string_insert.cpp as_proto.cpp util.cpp simple_string.cpp)
 target_link_libraries(string_insert Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(workload cf_ripemd160.c workload.cpp as_proto.cpp util.cpp simple_string.cpp transaction.cpp)
-target_link_libraries(workload Threads::Threads nlohmann_json::nlohmann_json)
+add_executable(mrt_workload cf_ripemd160.c mrt_workload.cpp as_proto.cpp util.cpp simple_string.cpp transaction.cpp)
+target_link_libraries(mrt_workload Threads::Threads nlohmann_json::nlohmann_json)
+
+add_executable(simplest_workload cf_ripemd160.c simplest_workload.cpp as_proto.cpp util.cpp simple_string.cpp transaction.cpp)
+target_link_libraries(simplest_workload Threads::Threads nlohmann_json::nlohmann_json)
 
 add_executable(hello_rocks hello_rocks.cpp)
 target_link_libraries(hello_rocks rocksdb dl)			   

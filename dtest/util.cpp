@@ -7,6 +7,7 @@
 #include "cf_ripemd160.h"
 #include "as_proto.hpp"
 #include <time.h>
+#include <chrono>
 
 std::string get_labeled (const std::string& str, const std::string& l)
 {
@@ -15,7 +16,7 @@ std::string get_labeled (const std::string& str, const std::string& l)
     fp += l.length () + 1;
     size_t lp = str.find (':', fp);
     if (lp == std::string::npos)	lp = str.length ();
-    
+
     return str.substr (fp, (lp - fp));
 }
 
@@ -84,12 +85,16 @@ uint32_t secs_since_cfepoch (void)
     return ts.tv_sec - cfepoch;
 }
 
+uint64_t usec_now (void) {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 void to_hex (void *dst, const void* src, size_t sz)
 {
     const char lut[] = "0123456789ABCDEF";
     const uint8_t *sp = (const uint8_t *)src;
     char *dp = (char *)dst;
-    
+
     const uint8_t *ep = sp + sz;
     while (sp != ep) {
 	*dp++ = lut[(*sp & 0xF0)>>4];
@@ -105,13 +110,13 @@ void to_hex (void *dst, const void* src, size_t sz)
 
 nlohmann::json to_json (const as_msg *msg) {
     nlohmann::json ret;
-    
+
     ret["flags"] = msg->flags;
     if (msg->result_code)		ret["result_code"] = msg->result_code;
     if (msg->be_generation)		ret["generation"] = be32toh (msg->be_generation);
     if (msg->be_record_ttl)		ret["record_ttl"] = be32toh (msg->be_record_ttl);
     if (msg->be_transaction_ttl)	ret["transaction_ttl"] = be32toh (msg->be_transaction_ttl);
-    
+
     if (msg->be_fields) {
 	ret["fields"] = nlohmann::json::object ();
 	as_field *f = (as_field *)msg->data;
@@ -142,6 +147,6 @@ nlohmann::json to_json (const as_msg *msg) {
 	    ret["ops"].push_back (jop);
 	}
     }
-    
+
     return ret;
 }

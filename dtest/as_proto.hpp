@@ -167,7 +167,7 @@ struct as_msg
     as_field *add (as_field::type t, size_t sz, const void *data);
     as_field *add (as_field::type t, const std::string& str);
     as_op *add (as_op::type t, size_t name_sz, size_t data_sz);
-    as_op *add (as_op::type t, const std::string& name, size_t data_sz);
+    as_op *add (as_op::type t, const std::string& name, size_t data_sz, as_particle::type dt = as_particle::type::t_blob);
     as_op *add (as_op::type t, const std::string& name, size_t data_sz, const void *data, as_particle::type dt = as_particle::type::t_blob);
     as_op *add (as_op::type t, const std::string& name, const std::string& val);
 } __attribute__((__packed__));
@@ -180,6 +180,8 @@ size_t read (int fd, std::string& str);
 size_t call (int fd, as_msg **obuf, const as_msg* msg);
 size_t call (int fd, void **obuf, const as_msg* msg);
 size_t call (int fd, void **obuf, const std::string& str);
+
+size_t timed_call (int fd, as_msg **obuf, const as_msg* msg, uint64_t& dur);
 
 size_t call_info (int fd, std::string& obuf, const std::string& ibuf);
 std::string call_info (int fd, const std::string& str);

@@ -13,6 +13,7 @@ size_t add_integer_key_digest (void *dst, const std::string& sn, uint64_t ki);
 size_t add_string_key_digest (void *dst, const std::string& sn, const std::string& si);
 void hash_combine(std::size_t& seed, std::size_t value);
 
+uint64_t usec_now (void);
 uint32_t secs_since_cfepoch (void);
 std::string get_labeled (const std::string& str, const std::string& l);
 void to_hex (void *dst, const void* src, size_t sz);
