@@ -105,20 +105,20 @@ target_link_libraries(sserver Threads::Threads nlohmann_json::nlohmann_json)
 add_executable(info cf_ripemd160.c info.cpp util.cpp as_proto.cpp)
 target_link_libraries(info Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(mrttest cf_ripemd160.c mrttest.cpp as_proto.cpp util.cpp simple_string.cpp)
-target_link_libraries(mrttest Threads::Threads nlohmann_json::nlohmann_json)
+# add_executable(mrttest cf_ripemd160.c mrttest.cpp as_proto.cpp util.cpp simple_string.cpp)
+# target_link_libraries(mrttest Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(tstr cf_ripemd160.c tstr.cpp as_proto.cpp util.cpp simple_string.cpp transactional_string.cpp)
-target_link_libraries(tstr Threads::Threads nlohmann_json::nlohmann_json)
+# add_executable(tstr cf_ripemd160.c tstr.cpp as_proto.cpp util.cpp simple_string.cpp transactional_string.cpp)
+# target_link_libraries(tstr Threads::Threads nlohmann_json::nlohmann_json)
 
 add_executable(reroster cf_ripemd160.c reroster.cpp as_proto.cpp util.cpp simple_string.cpp)
 target_link_libraries(reroster Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(string_init cf_ripemd160.c string_init.cpp as_proto.cpp util.cpp simple_string.cpp)
-target_link_libraries(string_init Threads::Threads nlohmann_json::nlohmann_json)
+# add_executable(string_init cf_ripemd160.c string_init.cpp as_proto.cpp util.cpp simple_string.cpp)
+# target_link_libraries(string_init Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(string_insert cf_ripemd160.c string_insert.cpp as_proto.cpp util.cpp simple_string.cpp)
-target_link_libraries(string_insert Threads::Threads nlohmann_json::nlohmann_json)
+# add_executable(string_insert cf_ripemd160.c string_insert.cpp as_proto.cpp util.cpp simple_string.cpp)
+# target_link_libraries(string_insert Threads::Threads nlohmann_json::nlohmann_json)
 
 add_executable(mrt_workload cf_ripemd160.c mrt_workload.cpp as_proto.cpp util.cpp simple_string.cpp transaction.cpp)
 target_link_libraries(mrt_workload Threads::Threads nlohmann_json::nlohmann_json)
@@ -132,8 +132,8 @@ target_link_libraries(hello_rocks rocksdb dl)
 add_executable(dump dump.cpp cf_ripemd160.c as_proto.cpp util.cpp)
 target_link_libraries(dump Threads::Threads nlohmann_json::nlohmann_json)
 
-add_executable(hstest hstest.cpp)
-target_link_libraries(hstest httplib::httplib)
+# add_executable(hstest hstest.cpp)
+# target_link_libraries(hstest httplib::httplib)
 
 add_executable(dore dore.cpp cf_ripemd160.c as_proto.cpp util.cpp)
 target_link_libraries(dore Threads::Threads nlohmann_json::nlohmann_json rocksdb dl)
