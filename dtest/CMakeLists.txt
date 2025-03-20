@@ -28,10 +28,11 @@ set(rocksdb_BUILD_TESTS OFF)
 #   GIT_REPOSITORY	"https://github.com/HdrHistogram/HdrHistogram_c"
 #   GIT_TAG			"0.11.8")
 # 
+
 fetchcontent_declare(
   nlohmann_json
-  SOURCE_DIR  "/home/joshua/json"
-  GIT_TAG	"jpdev")
+  GIT_REPOSITORY	"https://github.com/jpollack/nlohmann-json"
+  GIT_TAG		"as")
 
 fetchcontent_declare(
   rocksdb
@@ -42,11 +43,6 @@ fetchcontent_declare(
   cpp-httplib
   GIT_REPOSITORY	"https://github.com/yhirose/cpp-httplib"
   GIT_TAG		"v0.16.3")
-
-# fetchcontent_declare(
-#  nlohmann_json
-#  GIT_REPOSITORY        "https://github.com/nlohmann/json.git"
-#  GIT_TAG               "v3.11.3")
 
 # fetchcontent_declare(
 #   concurrentqueue
