@@ -1,7 +1,6 @@
 #include "as_proto.hpp"
-#include "transaction.hpp"
-#include "simple_string.hpp"
 #include "util.hpp"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -11,9 +10,12 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <nlohmann/json.hpp>
 #include <numeric>
+#include <queue>
 #include <random>
 #include <signal.h>
 #include <sstream>
@@ -30,10 +32,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <queue>
-#include <numeric>
-#include <algorithm>
-#include <mutex>
 
 using json = nlohmann::json;
 
@@ -46,19 +44,15 @@ void sigint_handler (int signum) { g_running = false; }
 atomic<uint32_t> g_idx;
 vector<uint32_t> g_buf;
 
-size_t hist_bucket (double val, double min, double max, size_t numBuckets)
-{
-    if (val <= min)		return 0;
-    else if (val >= max)	return numBuckets - 1;
-    else			return 1 + ((val - min) * (numBuckets - 2)) / (max - min);
-}
-
 int tcp_connect (const std::string& str)
 {
     int fd;
+    int one = 1;
     auto ab = addr_resolve (str);
     dieunless ((fd = ::socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
+    dieunless (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) == 0);
     dieunless (::connect (fd, (sockaddr *)ab.data (), ab.size ()) == 0);
+    dieunless (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) == 0);
     return fd;
 }
 
@@ -69,7 +63,7 @@ as_msg *visit (as_msg *msg, int ri, int flags)
     msg->be_transaction_ttl = htobe32 (1000);
     dieunless (msg->add (as_field::type::t_namespace, p["NS"]));
     dieunless (msg->add (as_field::type::t_set, p["SN"]));
-    add_integer_key_digest (msg->add (as_field::type::t_digest_ripe, CF_SHA_DIGEST_LENGTH)->data, p["SN"], ri);
+    add_integer_key_digest (msg->add (as_field::type::t_digest_ripe, 20)->data, p["SN"], ri);
     return msg;
 }
 as_msg *set_bin (as_msg *msg, uint16_t bidx, int64_t val)
@@ -173,6 +167,50 @@ void update_worker_entry (int rate)
 
 }
 
+void read_worker_entry (int rate)
+{
+    int fd = tcp_connect (p["ASDB"]);
+    auto nbins = stoi (p["NBINS"]);
+    auto id_lb = stoi (p["KEYLB"]);
+    auto id_ub = stoi (p["KEYUB"]);
+
+    thread_local static std::random_device rd;
+    thread_local static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distr(id_lb, id_ub); // define the range
+    std::uniform_int_distribution<> distb(1, nbins); // define the range
+
+    uint64_t tlast = 0;
+    uint64_t tnow;
+    int64_t ri;
+    int64_t val;
+    size_t bidx;
+    char buf[2048];
+    as_msg *res = (as_msg *)(buf + 64);
+    as_msg *req = (as_msg *)(buf + 1024);
+    uint64_t duration;
+
+    while (g_running.load ()) {
+	tlast = tnow;
+	record_get (req, distr (gen), distb (gen));
+	while (g_running.load () && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
+	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
+	    usleep ((td>10) ? (td-10) : 1);
+	}
+	if (!g_running.load ()) {
+	    break;
+	}
+
+	auto idx = g_idx.fetch_add (2);
+	auto ii = (idx / 2) + ((idx & 1) * (g_buf.size () / 2));
+	dieunless ((1024-64) > call (fd, &res, req, g_buf.data () + ii));
+	dieunless (res->result_code == 0);
+    }
+
+    close (fd);
+
+}
+
+
 void stats_worker_entry (int rate)
 {
     uint64_t tlast = 0;
@@ -198,6 +236,7 @@ void stats_worker_entry (int rate)
 	}
 
 	printf ("%s\n", jo.dump ().c_str ());
+	fflush (stdout);
     }
 
 }
@@ -212,6 +251,29 @@ void update_entry (void)
 
     for (int ii=0; ii < nth; ii++)
 	vth.emplace_back (update_worker_entry, stoi (p["RATE"]));
+
+    vth.emplace_back (stats_worker_entry, 1);
+
+    while (g_running) {
+	usleep (1000);
+    }
+
+    for (auto& th : vth) {
+	th.join ();
+    }
+
+}
+
+void read_entry (void)
+{
+    int nth = stoi (p["THREADS"]);
+    vector<thread> vth;
+
+    g_idx = 0;
+    g_buf.resize (1024*1024);
+
+    for (int ii=0; ii < nth; ii++)
+	vth.emplace_back (read_worker_entry, stoi (p["RATE"]));
 
     vth.emplace_back (stats_worker_entry, 1);
 
@@ -308,6 +370,7 @@ int main (int argc, char **argv, char **envp)
 
     if (!cmd.compare ("init")) {			init_entry ();
     } else if (!cmd.compare ("update")) {		update_entry ();
+    } else if (!cmd.compare ("read")) {			read_entry ();
     } else {
 	fprintf (stderr, "usage:\n %s init|update\n", argv[0]);
     }
