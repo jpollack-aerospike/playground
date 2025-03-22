@@ -88,17 +88,6 @@ int64_t bin_value (as_msg *msg)
 {
     return be64toh (*(int64_t *)msg->ops_begin ()->data ());
 }
-void record_set (as_msg *msg, int ri, size_t bidx, int64_t val)
-{
-    visit (msg, ri, AS_MSG_FLAG_WRITE);
-    set_bin (msg, bidx, val);
-}
-
-void record_get (as_msg *msg, int ri, size_t bidx)
-{
-    visit (msg, ri, AS_MSG_FLAG_READ);
-    get_bin (msg, bidx);
-}
 
 void record_init (as_msg *msg, int ri, size_t numBins, size_t padSize)
 {
@@ -123,7 +112,7 @@ void record_size (as_msg *msg, int ri)
     dieunless (msg->add (as_op::type::t_exp_read, "size", pload.size (), pload.data ()));
 }
 
-void update_worker_entry (int rate)
+void client_entry (int rate, bool doWrite)
 {
     int fd = tcp_connect (p["ASDB"]);
     auto nbins = stoi (p["NBINS"]);
@@ -148,7 +137,14 @@ void update_worker_entry (int rate)
 
     while (g_running.load ()) {
 	tlast = tnow;
-	record_set (req, distr (gen), distb (gen), distv (gen));
+	uint16_t bidx = stoi (p["BIDX"]) < 0 ? distb (gen) : stoi (p["BIDX"]);
+	visit (req, distr (gen), doWrite ? AS_MSG_FLAG_WRITE : AS_MSG_FLAG_READ);
+	if (doWrite) {
+	    set_bin (req, bidx, distv (gen));
+	} else {
+	    get_bin (req, bidx);
+	}
+
 	while (g_running.load () && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
 	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
 	    usleep ((td>10) ? (td-10) : 1);
@@ -167,51 +163,7 @@ void update_worker_entry (int rate)
 
 }
 
-void read_worker_entry (int rate)
-{
-    int fd = tcp_connect (p["ASDB"]);
-    auto nbins = stoi (p["NBINS"]);
-    auto id_lb = stoi (p["KEYLB"]);
-    auto id_ub = stoi (p["KEYUB"]);
-
-    thread_local static std::random_device rd;
-    thread_local static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distr(id_lb, id_ub); // define the range
-    std::uniform_int_distribution<> distb(1, nbins); // define the range
-
-    uint64_t tlast = 0;
-    uint64_t tnow;
-    int64_t ri;
-    int64_t val;
-    size_t bidx;
-    char buf[2048];
-    as_msg *res = (as_msg *)(buf + 64);
-    as_msg *req = (as_msg *)(buf + 1024);
-    uint64_t duration;
-
-    while (g_running.load ()) {
-	tlast = tnow;
-	record_get (req, distr (gen), distb (gen));
-	while (g_running.load () && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
-	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
-	    usleep ((td>10) ? (td-10) : 1);
-	}
-	if (!g_running.load ()) {
-	    break;
-	}
-
-	auto idx = g_idx.fetch_add (2);
-	auto ii = (idx / 2) + ((idx & 1) * (g_buf.size () / 2));
-	dieunless ((1024-64) > call (fd, &res, req, g_buf.data () + ii));
-	dieunless (res->result_code == 0);
-    }
-
-    close (fd);
-
-}
-
-
-void stats_worker_entry (int rate)
+void print_entry (int rate)
 {
     uint64_t tlast = 0;
     uint64_t tnow = usec_now ();
@@ -250,9 +202,9 @@ void update_entry (void)
     g_buf.resize (1024*1024);
 
     for (int ii=0; ii < nth; ii++)
-	vth.emplace_back (update_worker_entry, stoi (p["RATE"]));
+	vth.emplace_back (client_entry, stoi (p["RATE"]), true);
 
-    vth.emplace_back (stats_worker_entry, 1);
+    vth.emplace_back (print_entry, 1);
 
     while (g_running) {
 	usleep (1000);
@@ -273,9 +225,9 @@ void read_entry (void)
     g_buf.resize (1024*1024);
 
     for (int ii=0; ii < nth; ii++)
-	vth.emplace_back (read_worker_entry, stoi (p["RATE"]));
+	vth.emplace_back (client_entry, stoi (p["RATE"]), false);
 
-    vth.emplace_back (stats_worker_entry, 1);
+    vth.emplace_back (print_entry, 1);
 
     while (g_running) {
 	usleep (1000);
@@ -353,6 +305,7 @@ int main (int argc, char **argv, char **envp)
 	{ "RATE",		"200" },
 	{ "THREADS",		"1" },
 	{ "TRUNCATE",		"1" },
+	{ "BIDX",		"-1" },
     };
     // Override from environment
     for (auto ep = *envp; ep; ep = *(++envp))
