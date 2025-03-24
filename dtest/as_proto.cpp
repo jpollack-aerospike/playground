@@ -5,10 +5,6 @@
 #include <time.h>
 #include <chrono>
 
-static uint64_t _usec_now (void) {
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
 void as_header::size (size_t sz) {
     this->be_sz_extra = 0;
     this->be_sz = htobe32 (sz);
@@ -204,12 +200,12 @@ size_t read (int fd, std::string& str)
 
 size_t call (int fd, void **obuf, const as_msg* msg, uint32_t *dur)
 {
+    auto tp0 = std::chrono::high_resolution_clock::now ();
     write (fd, msg);
     if (dur) {
-	uint64_t t0{_usec_now ()};
 	size_t sz{read (fd, obuf)};
-	uint64_t t1{_usec_now ()};
-	*dur = t1 - t0;
+	auto tp1 = std::chrono::high_resolution_clock::now ();
+	*dur = (uint32_t) std::chrono::duration_cast<std::chrono::microseconds>(tp1 - tp0).count();
 	return sz;
     } else
 	return read (fd, obuf);
@@ -222,12 +218,12 @@ size_t call (int fd, as_msg **obuf, const as_msg* msg, uint32_t *dur)
 
 size_t call (int fd, void **obuf, const std::string& str, uint32_t *dur)
 {
+    auto tp0 = std::chrono::high_resolution_clock::now ();
     write (fd, str);
     if (dur) {
-	uint64_t t0{_usec_now ()};
 	size_t sz{read (fd, obuf)};
-	uint64_t t1{_usec_now ()};
-	*dur = t1 - t0;
+	auto tp1 = std::chrono::high_resolution_clock::now ();
+	*dur = (uint32_t) std::chrono::duration_cast<std::chrono::microseconds>(tp1 - tp0).count();
 	return sz;
     } else
 	return read (fd, obuf);
@@ -235,12 +231,12 @@ size_t call (int fd, void **obuf, const std::string& str, uint32_t *dur)
 
 size_t call_info (int fd, std::string& obuf, const std::string& ibuf, uint32_t *dur)
 {
+    auto tp0 = std::chrono::high_resolution_clock::now ();
     write (fd, ibuf);
     if (dur) {
-	uint64_t t0{_usec_now ()};
 	size_t sz{read (fd, obuf)};
-	uint64_t t1{_usec_now ()};
-	*dur = t1 - t0;
+	auto tp1 = std::chrono::high_resolution_clock::now ();
+	*dur = (uint32_t) std::chrono::duration_cast<std::chrono::microseconds>(tp1 - tp0).count();
 	return sz;
     } else
 	return read (fd, obuf);

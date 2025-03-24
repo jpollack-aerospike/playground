@@ -125,8 +125,10 @@ void client_entry (int rate, bool doWrite)
     std::uniform_int_distribution<> distb(1, nbins); // define the range
     std::uniform_int_distribution<> distv(0, std::numeric_limits<int32_t>::max ());
 
-    uint64_t tlast = 0;
-    uint64_t tnow;
+    std::uniform_real_distribution<double> distd (0, 1);
+
+    uint64_t tnow = usec_now ();
+    uint64_t tnext;
     int64_t ri;
     int64_t val;
     size_t bidx;
@@ -135,8 +137,12 @@ void client_entry (int rate, bool doWrite)
     as_msg *req = (as_msg *)(buf + 1024);
     uint64_t duration;
 
+    double idi = rate ? 1000000.0f / (double)rate : 0.0;
+
     while (g_running.load ()) {
-	tlast = tnow;
+	tnext = tnow + -log (1.0f - distd (gen)) * idi;
+	if (rate == 0)
+	    tnext = tnow;
 	uint16_t bidx = stoi (p["BIDX"]) < 0 ? distb (gen) : stoi (p["BIDX"]);
 	visit (req, distr (gen), doWrite ? AS_MSG_FLAG_WRITE : AS_MSG_FLAG_READ);
 	if (doWrite) {
@@ -145,8 +151,8 @@ void client_entry (int rate, bool doWrite)
 	    get_bin (req, bidx);
 	}
 
-	while (g_running.load () && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
-	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
+	while (g_running.load () && ((tnow = usec_now ()) < tnext)) {
+	    uint64_t td = tnext - tnow;
 	    usleep ((td>10) ? (td-10) : 1);
 	}
 	if (!g_running.load ()) {
@@ -193,7 +199,7 @@ void print_entry (int rate)
 
 }
 
-void update_entry (void)
+void update_entry (bool doWrite)
 {
     int nth = stoi (p["THREADS"]);
     vector<thread> vth;
@@ -201,31 +207,11 @@ void update_entry (void)
     g_idx = 0;
     g_buf.resize (1024*1024);
 
-    for (int ii=0; ii < nth; ii++)
-	vth.emplace_back (client_entry, stoi (p["RATE"]), true);
-
-    vth.emplace_back (print_entry, 1);
-
-    while (g_running) {
-	usleep (1000);
-    }
-
-    for (auto& th : vth) {
-	th.join ();
-    }
-
-}
-
-void read_entry (void)
-{
-    int nth = stoi (p["THREADS"]);
-    vector<thread> vth;
-
-    g_idx = 0;
-    g_buf.resize (1024*1024);
+    if (stoi (p["DURATION"]) > 0)
+	vth.emplace_back ([&](){ sleep (stoi (p["DURATION"])); g_running = false; });
 
     for (int ii=0; ii < nth; ii++)
-	vth.emplace_back (client_entry, stoi (p["RATE"]), false);
+	vth.emplace_back (client_entry, stoi (p["RATE"]), doWrite);
 
     vth.emplace_back (print_entry, 1);
 
@@ -241,6 +227,8 @@ void read_entry (void)
 
 void init_entry (void)
 {
+    uint64_t tb0 = usec_now ();
+    printf ("%lu\n", tb0);
     int fd = tcp_connect (p["ASDB"]);
     auto recsize = stoi (p["RECSIZE"]);
     auto nbins = stoi (p["NBINS"]);
@@ -251,7 +239,7 @@ void init_entry (void)
     as_msg *req = (as_msg *)(buf + 1024);
     uint32_t dur = 0;
     json jo = { { "type", "insert" }, { "id", 0 }, { "bins", nbins } };
-
+    
     if (stoi (p["TRUNCATE"])) {
 	auto sret = call_info (fd, "truncate:namespace=" + p["NS"] + ";set=" + p["SN"] + ";\n", &dur);
 	// sret == 'truncate:namespace=ns0;set=demo;\tok'
@@ -291,21 +279,22 @@ const size_t g_ep_str_sz = char_traits<char>::length (g_ep_str);
 
 int main (int argc, char **argv, char **envp)
 {
-    dieunless (argc >= 2);
     // srand ((unsigned int)clock ());
     // Defaults for required variables.
     p = {
+	{ "ASDB",		"localhost:3000" },
+	{ "BIDX",		"-1" },
+	{ "DURATION",		"0" },
 	{ "KEYLB",		"1" },
 	{ "KEYUB",		"10" },
-	{ "ASDB",		"localhost:3000" },
-	{ "NS",			"ns0" },
-	{ "SN",			"demo" },
+	{ "MODE",		"read"},
 	{ "NBINS",		"20000" },
+	{ "NS",			"ns0" },
+	{ "RATE",		"100" },
 	{ "RECSIZE",		"500000" },
-	{ "RATE",		"200" },
+	{ "SN",			"demo" },
 	{ "THREADS",		"1" },
 	{ "TRUNCATE",		"1" },
-	{ "BIDX",		"-1" },
     };
     // Override from environment
     for (auto ep = *envp; ep; ep = *(++envp))
@@ -315,19 +304,23 @@ int main (int argc, char **argv, char **envp)
 	    if (ks.length ()) p[ks] = string (vs + 1);
 	}
 
+    for (auto ii=1; ii<argc; ii++) {
+	auto ap = argv[ii];
+	auto vs = strchr (ap, '=');
+	dieunless (vs);
+	auto ks = string (ap).substr (0, vs - ap);
+	transform (ks.begin (), ks.end (), ks.begin (), ::toupper);
+	if (ks.length ()) p[ks] = string (vs + 1);
+    }
+
     signal (SIGINT, sigint_handler);
     g_running = true;
 
-    // Make a client fd and connect
-    string cmd (argv[1]);
+    string cmd (p["MODE"]);
 
-    if (!cmd.compare ("init")) {			init_entry ();
-    } else if (!cmd.compare ("update")) {		update_entry ();
-    } else if (!cmd.compare ("read")) {			read_entry ();
-    } else {
-	fprintf (stderr, "usage:\n %s init|update\n", argv[0]);
-    }
-
+    if (!cmd.compare ("init"))				init_entry ();
+    else if (!cmd.compare ("update"))			update_entry (true);
+    else if (!cmd.compare ("read"))			update_entry (false);
 
     return 0;
 }
