@@ -40,7 +40,7 @@ unordered_map<string,string> p;
 
 atomic<bool> g_running;
 auto g_rng = std::default_random_engine {};
-void sigint_handler (int signum) { g_running = false; }
+void sigint_handler (int signum) { g_running.store(false); }
 atomic<uint32_t> g_idx;
 vector<uint32_t> g_buf;
 
@@ -175,12 +175,12 @@ void print_entry (int rate)
     uint64_t tnow = usec_now ();
     json jo = { { "now", tnow } };
 
-    while (g_running) {
-	while (g_running && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
+    while (g_running.load()) {
+      while (g_running.load() && ((tnow = usec_now ()) < (tlast + (1000000 / rate)))) {
 	    uint64_t td = (tlast + (1000000 / rate)) - tnow;
 	    usleep ((td>50) ? (td-50) : 10);
 	}
-	if (!g_running)	    break;
+      if (!g_running.load())	    break;
 	tlast = tnow;
 	jo["now"] = tnow;
 	jo["data"] = json::array ();
@@ -208,14 +208,14 @@ void update_entry (bool doWrite)
     g_buf.resize (1024*1024);
 
     if (stoi (p["DURATION"]) > 0)
-	vth.emplace_back ([&](){ sleep (stoi (p["DURATION"])); g_running = false; });
+      vth.emplace_back ([&](){ sleep (stoi (p["DURATION"])); g_running.store(false); });
 
     for (int ii=0; ii < nth; ii++)
 	vth.emplace_back (client_entry, stoi (p["RATE"]), doWrite);
 
     vth.emplace_back (print_entry, 1);
 
-    while (g_running) {
+    while (g_running.load()) {
 	usleep (1000);
     }
 
@@ -314,7 +314,7 @@ int main (int argc, char **argv, char **envp)
     }
 
     signal (SIGINT, sigint_handler);
-    g_running = true;
+    g_running.store(true);
 
     string cmd (p["MODE"]);
 
