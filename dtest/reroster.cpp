@@ -102,14 +102,14 @@ int main (int argc, char **argv, char **envp)
     dieunless ((cfd = socket (AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)) > 0);
     dieunless (connect (cfd, (sockaddr *)ab.data (), ab.size ()) == 0);
 
-    auto ret = info_get_roster (cfd, "ns0");
+    auto ret = info_get_roster (cfd, p["NS"].c_str());
     printf ("%s\n", ret.c_str ());
     string observed = get_labeled (ret, "observed_nodes");
     string roster = get_labeled (ret, "roster");
     if (roster.compare (observed)) {
-	dieunless (info_set_roster (cfd, "ns0", observed));
-	dieunless (info_recluster (cfd));
+      dieunless (info_set_roster (cfd, p["NS"].c_str(), observed));
     }
+	dieunless (info_recluster (cfd));
     
     close (cfd);
 
